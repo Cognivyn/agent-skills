@@ -1,0 +1,10 @@
+.kombai/
+*.log
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.tmp
