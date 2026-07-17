@@ -91,17 +91,24 @@ When you ask the agent to "create a GitHub issue", "file an issue", or turn a
 markdown plan/checklist into a tracked issue, the skill runs. It works against the
 **current working repository** (no hardcoded repo path).
 
-The key thing the skill handles is the PowerShell pitfall: passing a long
-multi-line body inline with `--body "..."` on pwsh often fails silently. The safe
-pattern is to write the body to a temp file, then pass it with `--body-file`:
+The skill first **detects the running shell/environment**, then picks the correct
+body-writing method. This matters because the key pitfall — passing a long
+multi-line body inline with `--body "..."` on pwsh — fails silently. The safe
+pattern is always: write the body to a temp file, then pass it with `--body-file`.
+
+Line-continuation differs by shell: bash uses a trailing backslash `\`, while
+PowerShell uses a trailing backtick `` ` ``.
+
+### Pure-Windows pwsh (no WSL / Git Bash)
+
+bash is not installed here, so the `bash -c` fallback fails. Write the body with
+a single-quoted here-string (backticks are literal):
 
 ```powershell
-# pwsh: write the body with a single-quoted here-string (backticks are literal)
-$body = @'
+@'
 ## Summary
 ...
-'@
-Set-Content -Encoding utf8 ./gh-issue-body.md $body
+'@ | Set-Content -Encoding utf8 ./gh-issue-body.md
 
 gh issue create `
   --title "Short descriptive title" `
@@ -115,7 +122,21 @@ gh issue list --state open --limit 5
 Remove-Item ./gh-issue-body.md
 ```
 
-On a bash shell the same idea uses a heredoc:
+### pwsh with bash available (WSL / Git Bash)
+
+```powershell
+bash -c 'cat > ./gh-issue-body.md << '"'"'MD'"'"'
+## Summary
+...
+MD'
+
+gh issue create `
+  --title "Short descriptive title" `
+  --label "enhancement" `
+  --body-file ./gh-issue-body.md
+```
+
+### Bash / POSIX
 
 ```bash
 cat > ./gh-issue-body.md << 'MD'
@@ -131,4 +152,5 @@ gh issue create \
 rm ./gh-issue-body.md
 ```
 
-Pick labels from `gh label list` — do not invent them.
+Pick labels from `gh label list` — do not invent them. For the full decision
+rule and anti-patterns, see the [skill docs](./docs/gh-issue-create/README.md).
