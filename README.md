@@ -1,157 +1,103 @@
 # Cognivyn Open Agent Skills
 
-This repository contains open-source skills for Cognivyn agent clients (like Kilo or Claude Code).
+Open-source, task-focused skills for agent clients such as [Kilo](https://kilo.ai/) and [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Each skill is a self-contained directory with a `SKILL.md` file that tells an agent when and how to use it.
 
-## Skills Index
+## Skills at a glance
 
-| Skill | Purpose | Trigger | Visibility | Docs |
-|-------|---------|---------|------------|------|
-| `gh-issue-create` | Create GitHub issues from the CLI robustly on Windows/pwsh | "create a GitHub issue", "file an issue" | Public | [docs/gh-issue-create](./docs/gh-issue-create/README.md) |
-| `git-clean` | Safely sync local `main` with `origin` without losing local work | "sync main", "clean git", "refresh main" | Public | [docs/git-clean](./docs/git-clean/README.md) |
+| Skill | Use it when you want to… | Main requirements | Documentation |
+| --- | --- | --- | --- |
+| [`gh-issue-create`](./gh-issue-create/) | Create a GitHub issue from the current repository, including a plan or Markdown checklist | GitHub CLI (`gh`) installed and authenticated | [Overview](./docs/gh-issue-create/README.md) · [`SKILL.md`](./gh-issue-create/SKILL.md) |
+| [`git-clean`](./git-clean/) | Safely synchronize the local `main` branch with `origin` without losing local work | Git and an `origin` remote | [Overview](./docs/git-clean/README.md) · [`SKILL.md`](./git-clean/SKILL.md) |
 
-See the [docs](./docs) folder for skill-specific documentation.
+The [skill-specific documentation](./docs/) contains concise usage and safety notes. The corresponding `SKILL.md` is the authoritative workflow an agent follows.
 
-## Prerequisites
+## Quick start
 
-Before using these skills you need:
+1. Clone this repository.
+2. Link or copy the skill folder you need into your agent client’s skills directory.
+3. Restart or reload the client so it discovers the skill.
+4. Ask the agent using language that matches the skill’s trigger, for example:
+   - “Create a GitHub issue from this checklist.”
+   - “Safely sync `main` with `origin` without losing local work.”
 
-- The [`gh` CLI](https://cli.github.com/) installed and authenticated (`gh auth login`).
-- An agent client that supports skills (e.g. Kilo, Claude Code) with a local skills directory.
-- Git, and the target repository cloned locally (skills operate on the current working repository).
-
-## Installing a skill
-
-Skills are discovered by the agent from a **skills directory** — a folder where each
-subdirectory contains a `SKILL.md` file. The agent reads the `name` and `description`
-frontmatter at the top of `SKILL.md` to learn when the skill applies (its trigger).
-
-Typical skills directory locations:
-
-| Client | Skills directory |
-|--------|------------------|
-| Kilo | `C:\Users\<you>\.kilocode\skills\` (Windows) / `~/.config/kilo/skills/` (Linux/macOS) |
-| Claude Code | `~/.agents/skills/` |
-
-To install a skill, clone this repo and link (or copy) the skill folder into your
-skills directory. Linking keeps it in sync with the repo.
-
-### Windows (directory junction)
-
-Run from an elevated (Administrator) PowerShell prompt:
-
-```powershell
-mklink /J "$env:USERPROFILE\.agents\skills\gh-issue-create" "Z:\path\to\agent-skills\gh-issue-create"
-```
-
-Replace the target path with wherever you cloned this repository. Use the matching
-skills directory for your client (see the table above).
-
-### macOS / Linux (symlink)
+For the GitHub issue skill, authenticate the CLI once before use:
 
 ```bash
-ln -s "/path/to/agent-skills/gh-issue-create" "$HOME/.agents/skills/gh-issue-create"
+gh auth login
+gh auth status
 ```
 
-### Copy instead of linking (any OS)
+## Installation
 
-If you prefer a standalone copy (no live sync with the repo):
+Skills are discovered from a **skills directory**. Install an individual skill by cloning this repository and then linking or copying that skill’s folder. Replace `<skill>` with `gh-issue-create` or `git-clean`.
+
+```bash
+git clone https://github.com/Cognivyn/agent-skills.git
+cd agent-skills
+```
+
+### Link on macOS or Linux
+
+```bash
+mkdir -p "$HOME/.agents/skills"
+ln -s "$PWD/<skill>" "$HOME/.agents/skills/<skill>"
+```
+
+### Link on Windows
+
+Run the following from an elevated PowerShell prompt. Update the destination if your client uses a different skills directory:
 
 ```powershell
-# Windows
-Copy-Item -Recurse ".\gh-issue-create" "$env:USERPROFILE\.agents\skills\gh-issue-create"
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.agents\skills" | Out-Null
+cmd /c mklink /J "$env:USERPROFILE\.agents\skills\<skill>" "$PWD\<skill>"
 ```
+
+### Copy instead of linking
+
+Use a copy when you want an independent installation that does not track repository changes:
 
 ```bash
 # macOS / Linux
-cp -r ./gh-issue-create "$HOME/.agents/skills/gh-issue-create"
+mkdir -p "$HOME/.agents/skills/<skill>"
+cp -R "./<skill>/"* "$HOME/.agents/skills/<skill>/"
 ```
 
-After installing, restart or reload the agent client so it picks up the new `SKILL.md`.
+```powershell
+# Windows PowerShell
+Copy-Item -Recurse -Force ".\<skill>" "$env:USERPROFILE\.agents\skills\<skill>"
+```
 
-## How skills are discovered
+After installation, restart or reload the agent client. If your client uses a different skills directory, follow that client’s documentation and substitute its path in the commands above.
 
-Each skill lives in its own folder containing a `SKILL.md` with YAML frontmatter:
+## How discovery works
+
+Every skill directory contains a `SKILL.md` with YAML frontmatter:
 
 ```markdown
 ---
-name: gh-issue-create
+name: git-clean
 description: >-
-  Create GitHub issues from the CLI using the gh tool, robustly handling
-  multi-line bodies and PowerShell/Windows shells. Use when the user asks to
-  create a GitHub issue, file an issue, open an issue for this, or turn a
-  plan/markdown checklist into a tracked GitHub issue.
+  Safely synchronize a local main branch with origin ...
 ---
 ```
 
-The agent matches the `description` (the trigger) against the user's request. When
-it fits, the agent follows the workflow documented in the body of the skill.
+The agent uses the `name` and `description` to decide when the skill applies, then follows the workflow in the body of `SKILL.md`. Keep trigger descriptions specific enough to avoid accidental matches and include the important safety boundaries in the workflow itself.
 
-## Using the gh-issue-create skill
+## Safety and scope
 
-When you ask the agent to "create a GitHub issue", "file an issue", or turn a
-markdown plan/checklist into a tracked issue, the skill runs. It works against the
-**current working repository** (no hardcoded repo path).
+- **`gh-issue-create`** detects the active shell before writing a multi-line issue body. It uses `--body-file`, reuses existing labels, avoids hardcoded repository paths, and verifies the result with `gh issue list`.
+- **`git-clean`** checks for local changes before switching branches or fetching. It never uses `git reset --hard`, `git clean`, forced checkout, or automatic conflict resolution. Dirty trees, detached HEADs, rebase conflicts, and stash-restore conflicts stop for explicit user action.
 
-The skill first **detects the running shell/environment**, then picks the correct
-body-writing method. This matters because the key pitfall — passing a long
-multi-line body inline with `--body "..."` on pwsh — fails silently. The safe
-pattern is always: write the body to a temp file, then pass it with `--body-file`.
+Read each skill’s `SKILL.md` before adapting it for another agent client or workflow.
 
-Line-continuation differs by shell: bash uses a trailing backslash `\`, while
-PowerShell uses a trailing backtick `` ` ``.
+## Contributing
 
-### Pure-Windows pwsh (no WSL / Git Bash)
+Contributions are welcome. Add each new skill as its own top-level directory containing a `SKILL.md` with valid YAML frontmatter, concise trigger language, a deterministic workflow, safety rules, and validation instructions. Add a short companion guide under `docs/<skill>/README.md`, then update the skills table above.
 
-bash is not installed here, so the `bash -c` fallback fails. Write the body with
-a single-quoted here-string (backticks are literal):
-
-```powershell
-@'
-## Summary
-...
-'@ | Set-Content -Encoding utf8 ./gh-issue-body.md
-
-gh issue create `
-  --title "Short descriptive title" `
-  --label "enhancement" `
-  --body-file ./gh-issue-body.md
-
-# Always verify - no output does NOT mean success
-gh issue list --state open --limit 5
-
-# Clean up the temp file
-Remove-Item ./gh-issue-body.md
-```
-
-### pwsh with bash available (WSL / Git Bash)
-
-```powershell
-bash -c 'cat > ./gh-issue-body.md << '"'"'MD'"'"'
-## Summary
-...
-MD'
-
-gh issue create `
-  --title "Short descriptive title" `
-  --label "enhancement" `
-  --body-file ./gh-issue-body.md
-```
-
-### Bash / POSIX
+Before opening a pull request, run the repository’s skill validator from the repository root:
 
 ```bash
-cat > ./gh-issue-body.md << 'MD'
-## Summary
-...
-MD
-
-gh issue create \
-  --title "Short descriptive title" \
-  --label "enhancement" \
-  --body-file ./gh-issue-body.md
-
-rm ./gh-issue-body.md
+python /home/ubuntu/skills/skill-creator/scripts/quick_validate.py <skill>
 ```
 
-Pick labels from `gh label list` — do not invent them. For the full decision
-rule and anti-patterns, see the [skill docs](./docs/gh-issue-create/README.md).
+Also verify Markdown links and examples, test shell-specific commands in the environments they target, and confirm that the README describes the current skill inventory.
