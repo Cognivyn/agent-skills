@@ -7,6 +7,7 @@ This repository contains open-source skills for Cognivyn agent clients (like Kil
 | Skill | Purpose | Trigger | Visibility | Docs |
 |-------|---------|---------|------------|------|
 | `gh-issue-create` | Create GitHub issues from the CLI robustly on Windows/pwsh | "create a GitHub issue", "file an issue" | Public | [docs/gh-issue-create](./docs/gh-issue-create/README.md) |
+| `git-clean` | Safely sync local `main` with `origin` without losing local work | "sync main", "clean git", "refresh main" | Public | [docs/git-clean](./docs/git-clean/README.md) |
 
 See the [docs](./docs) folder for skill-specific documentation.
 
