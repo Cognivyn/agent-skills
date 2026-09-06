@@ -3,10 +3,9 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 from agent_skills.cli import main
-from agent_skills.workspace import WorkspaceError, init_workspace, load_workspace, remove_skill
+from agent_skills.workspace import init_workspace, remove_skill
 
 
 class CliTestCase(unittest.TestCase):
@@ -39,6 +38,7 @@ class CliTestCase(unittest.TestCase):
         self.assertEqual(main(["create", "new-skill"]), 0)
         skill_file = self.root / "new-skill" / "SKILL.md"
         self.assertTrue(skill_file.exists())
+        self.assertTrue((self.root / "docs" / "new-skill" / "README.md").exists())
         self.assertNotEqual(main(["create", "new-skill"]), 0)
         self.assertNotEqual(main(["create", "Bad_Name"]), 0)
 
@@ -49,9 +49,30 @@ class CliTestCase(unittest.TestCase):
         self.assertEqual(main(["list"]), 0)
         main(["add", "demo-skill"])
         self.assertTrue((destination / "demo-skill" / "SKILL.md").exists())
-        main(["list"])
+        self.assertEqual(main(["list"]), 0)
         main(["remove", "demo-skill"])
         self.assertFalse((destination / "demo-skill").exists())
+
+    def test_validate_accepts_valid_skill_and_all_mode(self):
+        self.assertEqual(main(["validate", "demo-skill"]), 0)
+        self.assertEqual(main(["validate"]), 0)
+
+    def test_validate_rejects_bad_frontmatter_and_missing_dependency(self):
+        broken = self.root / "broken-skill"
+        broken.mkdir()
+        (broken / "SKILL.md").write_text(
+            "---\nname: wrong-name\ndescription:\nmetadata:\n  dependencies:\n    - missing-skill\n---\n",
+            encoding="utf-8",
+        )
+        self.assertEqual(main(["validate", "broken-skill"]), 1)
+        self.assertEqual(main(["validate"]), 1)
+
+    def test_validate_rejects_self_dependency(self):
+        (self.root / "demo-skill" / "SKILL.md").write_text(
+            "---\nname: demo-skill\ndescription: test\nmetadata:\n  dependencies: [demo-skill]\n---\n",
+            encoding="utf-8",
+        )
+        self.assertEqual(main(["validate", "demo-skill"]), 1)
 
     def test_add_duplicate_is_safe_and_remove_missing_is_safe(self):
         destination = self.root / "installed"

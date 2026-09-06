@@ -6,6 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from .validation import validate_skills
 from .workspace import (
     WorkspaceError,
     add_skill,
@@ -30,6 +31,9 @@ def build_parser() -> argparse.ArgumentParser:
     create.add_argument("--directory", type=Path, help="directory in which to create the skill")
 
     subparsers.add_parser("list", help="list available and added skills")
+
+    validate = subparsers.add_parser("validate", help="validate skill frontmatter and dependencies")
+    validate.add_argument("names", nargs="*", help="skill names; validate all when omitted")
 
     add = subparsers.add_parser("add", help="add one or more skills to the workspace")
     add.add_argument("names", nargs="+")
@@ -61,6 +65,17 @@ def run(args: argparse.Namespace) -> int:
         for name, state in rows:
             print(f"{name}\t{state}")
         return 0
+    if args.command == "validate":
+        reports = validate_skills(repository, args.names)
+        failed = False
+        for report in reports:
+            if report.valid:
+                print(f"{report.name}: valid")
+            else:
+                failed = True
+                for error in report.errors:
+                    print(f"{report.name}: error: {error}", file=sys.stderr)
+        return 1 if failed else 0
     workspace = load_workspace(repository)
     if args.command == "add":
         for name in args.names:

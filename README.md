@@ -22,6 +22,7 @@ The [skill-specific documentation](./docs/) contains concise usage and safety no
 ```bash
 ./agent-skills init
 ./agent-skills list
+./agent-skills validate
 ./agent-skills add git-clean
 ```
 
@@ -40,6 +41,7 @@ The repository includes a dependency-free Python CLI. Run it from the repository
 agent-skills init [--skills-dir PATH]
 agent-skills create NAME [--directory PATH]
 agent-skills list
+agent-skills validate [NAME ...]
 agent-skills add NAME [NAME ...] [--link]
 agent-skills remove NAME [NAME ...] [--force]
 ```
@@ -61,6 +63,23 @@ The command refuses to overwrite an existing skill. Complete the generated trigg
 ### `list`
 
 Lists repository skills and labels each as `available` or `added`. It is read-only and can be used before `init`.
+
+### `validate`
+
+Checks one named skill or all repository skills when no name is supplied. Validation verifies the `SKILL.md` frontmatter, that the declared skill name matches its directory, and that optional dependencies exist. Dependencies use the supported metadata form:
+
+```markdown
+---
+name: release-notes
+description: >-
+  Create release notes from a repository history.
+metadata:
+  dependencies:
+    - git-clean
+---
+```
+
+The command is read-only and returns a non-zero exit status when any skill is invalid or a dependency is missing.
 
 ### `add`
 
@@ -139,6 +158,7 @@ The agent uses the `name` and `description` to decide when the skill applies, th
 - **`gh-issue-create`** detects the active shell before writing a multi-line issue body. It uses `--body-file`, reuses existing labels, avoids hardcoded repository paths, and verifies the result with `gh issue list`.
 - **`git-clean`** checks for local changes before switching branches or fetching. It never uses `git reset --hard`, `git clean`, forced checkout, or automatic conflict resolution. Dirty trees, detached HEADs, rebase conflicts, and stash-restore conflicts stop for explicit user action.
 - The CLI validates skills before adding them, tracks added names in `.agent-skills/manifest.json`, and restricts removal to manifest-managed destinations.
+- `agent-skills validate` checks frontmatter and `metadata.dependencies` without modifying the repository.
 
 Read each skill’s `SKILL.md` before adapting it for another agent client or workflow.
 
