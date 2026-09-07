@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -189,3 +190,31 @@ def create_skill(repository: Path, name: str, destination: Path | None = None) -
 def list_skills(workspace: Workspace) -> list[tuple[str, str]]:
     added = set(manifest_skills(workspace))
     return [(name, "added" if name in added else "available") for name in available_skills(workspace.repository)]
+
+
+def remote_skills(repository: Path, remote: str = "origin", branch: str = "main") -> list[str]:
+    """List top-level skills from a remote-tracking branch without fetching."""
+    try:
+        result = subprocess.run(
+            ["git", "ls-tree", "-d", "--name-only", f"{remote}/{branch}"],
+            cwd=repository,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return []
+    if result.returncode != 0:
+        return []
+    excluded = {"docs", "tests", "agent_skills"}
+    names = []
+    for line in result.stdout.splitlines():
+        name = line.strip()
+        if name and not name.startswith(".") and name not in excluded and SKILL_NAME_RE.fullmatch(name):
+            names.append(name)
+    return sorted(names)
+
+
+def list_skill_sources(workspace: Workspace) -> tuple[list[tuple[str, str]], list[str]]:
+    """Return local status rows and skills visible on origin/main."""
+    return list_skills(workspace), remote_skills(workspace.repository)

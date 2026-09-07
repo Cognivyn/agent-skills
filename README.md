@@ -62,7 +62,18 @@ The command refuses to overwrite an existing skill. Complete the generated trigg
 
 ### `list`
 
-Lists repository skills and labels each as `available` or `added`. It is read-only and can be used before `init`.
+Lists repository skills and labels each local skill as `available` or `added`. It also lists skills visible on the local `origin/main` remote-tracking branch. The command does not fetch from the network, so the remote section reflects the most recent local Git fetch. It is read-only and can be used before `init`.
+
+```text
+local:
+  git-clean       added
+  gh-issue-create available
+remote (origin/main):
+  git-clean
+  gh-issue-create
+```
+
+If no `origin/main` tracking branch is available, the command reports the remote section as unavailable or empty while still showing local skills.
 
 ### `validate`
 
@@ -79,7 +90,7 @@ metadata:
 ---
 ```
 
-The command is read-only and returns a non-zero exit status when any skill is invalid or a dependency is missing.
+The command is read-only and returns a non-zero exit status when any skill is invalid, a dependency is missing, or dependencies form a cycle. It detects malformed or unterminated frontmatter, missing required fields, name mismatches, invalid dependency names, self-dependencies, and circular dependency chains.
 
 ### `add`
 
