@@ -6,6 +6,7 @@ Open-source, task-focused skills for agent clients such as [Kilo](https://kilo.a
 
 | Skill | Use it when you want to… | Main requirements | Documentation |
 | --- | --- | --- | --- |
+| [`bun-dokploy-infisical`](./bun-dokploy-infisical/) | Generate Bun monorepo Dockerfile and Compose deployment assets for Dokploy, Traefik, and Infisical runtime secret injection | Bun monorepo, Docker Compose, Dokploy, Traefik, and an Infisical Universal Auth machine identity | [Overview](./docs/bun-dokploy-infisical/README.md) · [`SKILL.md`](./bun-dokploy-infisical/SKILL.md) |
 | [`gh-issue-create`](./gh-issue-create/) | Create a GitHub issue from the current repository, including a plan or Markdown checklist | GitHub CLI (`gh`) installed and authenticated | [Overview](./docs/gh-issue-create/README.md) · [`SKILL.md`](./gh-issue-create/SKILL.md) |
 | [`git-clean`](./git-clean/) | Safely synchronize the local `main` branch with `origin` without losing local work | Git and an `origin` remote | [Overview](./docs/git-clean/README.md) · [`SKILL.md`](./git-clean/SKILL.md) |
 
