@@ -12,7 +12,7 @@ from .workspace import (
     add_skill,
     create_skill,
     init_workspace,
-    list_skills,
+    list_skill_sources,
     load_workspace,
     remove_skill,
     repository_root,
@@ -58,12 +58,22 @@ def run(args: argparse.Namespace) -> int:
         return 0
     if args.command == "list":
         workspace = load_workspace(repository, initialized=False)
-        rows = list_skills(workspace)
-        if not rows:
+        local_rows, remote_rows = list_skill_sources(workspace)
+        if not local_rows and not remote_rows:
             print("no skills found")
             return 0
-        for name, state in rows:
-            print(f"{name}\t{state}")
+        print("local:")
+        if local_rows:
+            for name, state in local_rows:
+                print(f"  {name}\t{state}")
+        else:
+            print("  none")
+        print("remote (origin/main):")
+        if remote_rows:
+            for name in remote_rows:
+                print(f"  {name}")
+        else:
+            print("  unavailable or empty")
         return 0
     if args.command == "validate":
         reports = validate_skills(repository, args.names)

@@ -2,7 +2,11 @@ import json
 import os
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from agent_skills.cli import main
 from agent_skills.workspace import init_workspace, remove_skill
@@ -73,6 +77,35 @@ class CliTestCase(unittest.TestCase):
             encoding="utf-8",
         )
         self.assertEqual(main(["validate", "demo-skill"]), 1)
+
+    def test_validate_rejects_malformed_frontmatter(self):
+        malformed = self.root / "malformed-skill"
+        malformed.mkdir()
+        (malformed / "SKILL.md").write_text("---\nname: malformed-skill\n", encoding="utf-8")
+        self.assertEqual(main(["validate", "malformed-skill"]), 1)
+
+    def test_validate_rejects_circular_dependencies(self):
+        second = self.root / "second-skill"
+        second.mkdir()
+        (self.root / "demo-skill" / "SKILL.md").write_text(
+            "---\nname: demo-skill\ndescription: test\nmetadata:\n  dependencies:\n    - second-skill\n---\n",
+            encoding="utf-8",
+        )
+        (second / "SKILL.md").write_text(
+            "---\nname: second-skill\ndescription: test\nmetadata:\n  dependencies:\n    - demo-skill\n---\n",
+            encoding="utf-8",
+        )
+        self.assertEqual(main(["validate", "demo-skill"]), 1)
+        self.assertEqual(main(["validate", "second-skill"]), 1)
+
+    def test_list_includes_remote_tracking_skills(self):
+        result = SimpleNamespace(returncode=0, stdout="remote-skill\ndocs\n")
+        output = StringIO()
+        with patch("agent_skills.workspace.subprocess.run", return_value=result), redirect_stdout(output):
+            self.assertEqual(main(["list"]), 0)
+        self.assertIn("local:", output.getvalue())
+        self.assertIn("remote (origin/main):", output.getvalue())
+        self.assertIn("remote-skill", output.getvalue())
 
     def test_add_duplicate_is_safe_and_remove_missing_is_safe(self):
         destination = self.root / "installed"

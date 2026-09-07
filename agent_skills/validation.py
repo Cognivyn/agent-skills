@@ -118,8 +118,54 @@ def validate_skill_report(repository: Path, name: str) -> ValidationReport:
     return ValidationReport(name, tuple(errors))
 
 
+def dependency_names(repository: Path, name: str) -> list[str]:
+    """Return syntactically readable dependencies for graph validation."""
+    skill_file = skill_path(repository, name) / SKILL_FILE
+    if not skill_file.is_file():
+        return []
+    parsed = _frontmatter(skill_file.read_text(encoding="utf-8"))
+    if parsed is None:
+        return []
+    dependencies, _errors = _dependencies(parsed[0])
+    return [item for item in dependencies if SKILL_NAME_RE.fullmatch(item)]
+
+
+def _cycles(repository: Path, names: list[str]) -> dict[str, str]:
+    graph = {
+        name: [item for item in dependency_names(repository, name) if item in names and item != name]
+        for name in names
+    }
+    found: dict[str, str] = {}
+    visiting: list[str] = []
+
+    def visit(name: str) -> None:
+        if name in visiting:
+            start = visiting.index(name)
+            cycle = visiting[start:] + [name]
+            message = "circular dependency: " + " -> ".join(cycle)
+            for member in cycle[:-1]:
+                found[member] = message
+            return
+        visiting.append(name)
+        for dependency in graph.get(name, []):
+            visit(dependency)
+        visiting.pop()
+
+    for name in names:
+        visit(name)
+    return found
+
+
 def validate_skills(repository: Path, names: list[str] | None = None) -> list[ValidationReport]:
     selected = names if names else available_skills(repository)
     if not selected:
         raise WorkspaceError("no skills found")
-    return [validate_skill_report(repository, name) for name in selected]
+    reports = []
+    cycles = _cycles(repository, available_skills(repository))
+    for name in selected:
+        report = validate_skill_report(repository, name)
+        cycle = cycles.get(name)
+        if cycle and cycle not in report.errors:
+            report = ValidationReport(report.name, (*report.errors, cycle))
+        reports.append(report)
+    return reports
