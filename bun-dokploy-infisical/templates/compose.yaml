@@ -1,0 +1,28 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      INFISICAL_CLIENT_ID: ${INFISICAL_CLIENT_ID:?set in Dokploy}
+      INFISICAL_CLIENT_SECRET: ${INFISICAL_CLIENT_SECRET:?set in Dokploy}
+      INFISICAL_SECRET_PATH: ${INFISICAL_SECRET_PATH:-/}
+      INFISICAL_URL: ${INFISICAL_URL:?set in Dokploy}
+      INFISICAL_PROJECT_ID: ${INFISICAL_PROJECT_ID:?non-secret project ID required}
+      INFISICAL_ENVIRONMENT: ${INFISICAL_ENVIRONMENT:?non-secret environment slug required}
+    entrypoint: ["/usr/local/bin/entrypoint-infisical.sh"]
+    command: ["bun", "run", "start"]
+    networks:
+      - traefik-public
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: traefik-public
+      traefik.http.routers.app.rule: Host(`app.example.com`)
+      traefik.http.routers.app.entrypoints: websecure
+      traefik.http.routers.app.tls: "true"
+      traefik.http.routers.app.tls.certresolver: letsencrypt
+      traefik.http.services.app.loadbalancer.server.port: "3000"
+
+networks:
+  traefik-public:
+    external: true
