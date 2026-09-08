@@ -129,10 +129,11 @@ final status and HEAD checks.
 
 ## Validation
 
-From the parent of the skill directory, run:
+From the repository root, run:
 
 ```bash
-python /home/ubuntu/skills/skill-creator/scripts/quick_validate.py git-clean
+./agent-skills validate git-clean
+python -m unittest discover -s tests -v
 ```
 
 The skill directory must contain `SKILL.md` and no unused generated template
@@ -144,4 +145,4 @@ The commands require Git, a configured `origin` remote, and a local `main`
 branch. This skill operates only on the current repository; it does not resolve
 conflicts, rewrite history, delete branches, or publish changes.
 
-Complete license terms are provided in the repository's `LICENSE.txt`.
+This skill is distributed under the repository's MIT license.

@@ -6,4 +6,4 @@ The skill follows Infisical's recommended fetch-at-startup approach. It generate
 
 Before using it, have an Infisical Machine Identity with Universal Auth, project membership with read access, a project ID and environment slug, and a reachable Infisical URL. Dokploy should provide bootstrap credentials through protected environment variables. The skill deliberately distinguishes this startup flow from Dokploy's separate deploy-time Infisical Secrets Provider.
 
-See [`SKILL.md`](../../bun-dokploy-infisical/SKILL.md) for the authoritative workflow and official references.
+See [`SKILL.md`](../../../bun-dokploy-infisical/SKILL.md) for the authoritative workflow and official references.

@@ -9,3 +9,5 @@ Thumbs.db
 .idea/
 *.tmp
 .agent-skills/
+__pycache__/
+*.pyc

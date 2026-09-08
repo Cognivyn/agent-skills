@@ -17,5 +17,5 @@ automatic conflict resolution. A dirty tree requires the user to choose stash,
 commit-and-rerun, or abort. Rebase and stash-restore conflicts are reported for
 manual recovery.
 
-See [`../../git-clean/SKILL.md`](../../git-clean/SKILL.md) for the complete
+See [`../../../git-clean/SKILL.md`](../../../git-clean/SKILL.md) for the complete
 agent workflow and required report format.

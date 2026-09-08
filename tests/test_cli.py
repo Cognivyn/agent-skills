@@ -42,7 +42,7 @@ class CliTestCase(unittest.TestCase):
         self.assertEqual(main(["create", "new-skill"]), 0)
         skill_file = self.root / "new-skill" / "SKILL.md"
         self.assertTrue(skill_file.exists())
-        self.assertTrue((self.root / "docs" / "new-skill" / "README.md").exists())
+        self.assertTrue((self.root / "docs" / "skills" / "new-skill" / "README.md").exists())
         self.assertNotEqual(main(["create", "new-skill"]), 0)
         self.assertNotEqual(main(["create", "Bad_Name"]), 0)
 

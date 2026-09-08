@@ -23,14 +23,14 @@ Optional package resources are grouped by function:
 | `scripts/` | Deterministic, reusable utilities that can run without reproducing their implementation in the prompt. |
 | `templates/` | Boilerplate or output assets used by the skill. |
 
-A skill-specific companion guide belongs at `docs/<skill-name>/README.md`. It is for concise human-facing orientation; it must not duplicate the complete workflow in `SKILL.md`.
+A skill-specific companion guide belongs at `docs/skills/<skill-name>/README.md`. It is for concise human-facing orientation; it must not duplicate the complete workflow in `SKILL.md`.
 
 ## Repository boundaries
 
 | Location | Scope | Change guidance |
 | --- | --- | --- |
 | Top-level `<skill-name>/` | Runtime skill package | Keep self-contained and preserve the `SKILL.md` entry point. |
-| `docs/<skill-name>/` | Human-facing skill overview | Link to the authoritative skill and explain usage or safety notes. |
+| `docs/skills/<skill-name>/` | Human-facing skill overview | Link to the authoritative skill and explain usage or safety notes. |
 | `docs/` root documents | Cross-skill policy and contributor guidance | Put shared rules here rather than copying them into every skill. |
 | `agent_skills/` | CLI and repository-management implementation | Change only when repository behavior or path contracts change. |
 | `tests/` | Automated behavior coverage | Add regression coverage for CLI or validation changes. |

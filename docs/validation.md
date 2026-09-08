@@ -22,13 +22,7 @@ The suite covers workspace initialization, scaffolding, discovery, installation/
 
 ### Package-specific validation
 
-For changed skills, run the skill-creator validator when available:
-
-```bash
-python /home/ubuntu/skills/skill-creator/scripts/quick_validate.py <skill-name>
-```
-
-Also inspect the skill's documented examples and run safe, representative commands where practical. Never use real secrets or paste sensitive command output into a review.
+Inspect the skill's documented examples and run safe, representative commands where practical. Never use real secrets or paste sensitive command output into a review.
 
 ## Documentation checks
 
