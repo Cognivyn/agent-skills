@@ -12,6 +12,17 @@ Open-source, task-focused skills for agent clients such as [Kilo](https://kilo.a
 
 The [skill-specific documentation](./docs/) contains concise usage and safety notes. The corresponding `SKILL.md` is the authoritative workflow an agent follows.
 
+## Repository documentation
+
+The repository-wide guidance is organized under [`docs/`](./docs/):
+
+- [Architecture](./docs/architecture.md) explains the package contract and discovery boundaries.
+- [Scalability](./docs/scalability.md) explains progressive disclosure and safe catalog growth.
+- [Authoring guide](./docs/authoring-guide.md) explains how to create and update skills.
+- [Validation](./docs/validation.md) lists local checks and pull-request quality gates.
+
+Skill packages intentionally remain top-level directories because the CLI and supported agent clients discover them by locating `SKILL.md`. Shared policy belongs in `docs/`; skill-specific detail belongs in each package's `references/`, `scripts/`, or `templates/` directory.
+
 ## Quick start
 
 1. Clone this repository.
@@ -176,7 +187,7 @@ Read each skill’s `SKILL.md` before adapting it for another agent client or wo
 
 ## Contributing
 
-Contributions are welcome. Add each new skill as its own top-level directory containing a `SKILL.md` with valid YAML frontmatter, concise trigger language, a deterministic workflow, safety rules, and validation instructions. Add a short companion guide under `docs/<skill>/README.md`, then update the skills table above.
+Contributions are welcome. Read the [authoring guide](./docs/authoring-guide.md) and [validation guide](./docs/validation.md) before making changes. Add each new skill as its own top-level directory containing a `SKILL.md` with valid YAML frontmatter, concise trigger language, a deterministic workflow, safety rules, and validation instructions. Add a short companion guide under `docs/<skill>/README.md`, then update the skills table above.
 
 Create a scaffold with:
 
@@ -184,10 +195,12 @@ Create a scaffold with:
 ./agent-skills create my-skill
 ```
 
-Before opening a pull request, run the repository’s skill validator from the repository root:
+Before opening a pull request, run the repository’s skill validator and test suite from the repository root:
 
 ```bash
 python /home/ubuntu/skills/skill-creator/scripts/quick_validate.py <skill>
+./agent-skills validate
+python -m unittest discover -s tests -v
 ```
 
 Run the CLI test suite and also verify Markdown links and examples, test shell-specific commands in the environments they target, and confirm that the README describes the current skill inventory.
