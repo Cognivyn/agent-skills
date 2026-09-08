@@ -6,11 +6,11 @@ Open-source, task-focused skills for agent clients such as [Kilo](https://kilo.a
 
 | Skill | Use it when you want to… | Main requirements | Documentation |
 | --- | --- | --- | --- |
-| [`bun-dokploy-infisical`](./bun-dokploy-infisical/) | Generate Bun monorepo Dockerfile and Compose deployment assets for Dokploy, Traefik, and Infisical runtime secret injection | Bun monorepo, Docker Compose, Dokploy, Traefik, and an Infisical Universal Auth machine identity | [Overview](./docs/bun-dokploy-infisical/README.md) · [`SKILL.md`](./bun-dokploy-infisical/SKILL.md) |
-| [`gh-issue-create`](./gh-issue-create/) | Create a GitHub issue from the current repository, including a plan or Markdown checklist | GitHub CLI (`gh`) installed and authenticated | [Overview](./docs/gh-issue-create/README.md) · [`SKILL.md`](./gh-issue-create/SKILL.md) |
-| [`git-clean`](./git-clean/) | Safely synchronize the local `main` branch with `origin` without losing local work | Git and an `origin` remote | [Overview](./docs/git-clean/README.md) · [`SKILL.md`](./git-clean/SKILL.md) |
+| [`bun-dokploy-infisical`](./bun-dokploy-infisical/) | Generate Bun monorepo Dockerfile and Compose deployment assets for Dokploy, Traefik, and Infisical runtime secret injection | Bun monorepo, Docker Compose, Dokploy, Traefik, and an Infisical Universal Auth machine identity | [Overview](./docs/skills/bun-dokploy-infisical/README.md) · [`SKILL.md`](./bun-dokploy-infisical/SKILL.md) |
+| [`gh-issue-create`](./gh-issue-create/) | Create a GitHub issue from the current repository, including a plan or Markdown checklist | GitHub CLI (`gh`) installed and authenticated | [Overview](./docs/skills/gh-issue-create/README.md) · [`SKILL.md`](./gh-issue-create/SKILL.md) |
+| [`git-clean`](./git-clean/) | Safely synchronize the local `main` branch with `origin` without losing local work | Git and an `origin` remote | [Overview](./docs/skills/git-clean/README.md) · [`SKILL.md`](./git-clean/SKILL.md) |
 
-The [skill-specific documentation](./docs/) contains concise usage and safety notes. The corresponding `SKILL.md` is the authoritative workflow an agent follows.
+The [skill-specific documentation](./docs/skills/) contains concise usage and safety notes. The corresponding `SKILL.md` is the authoritative workflow an agent follows.
 
 ## Repository documentation
 
@@ -64,7 +64,7 @@ Creates `.agent-skills/config.json` and `.agent-skills/manifest.json` in the rep
 
 ### `create`
 
-Creates a new top-level skill directory containing a valid `SKILL.md`. When creating in the repository root, it also creates `docs/<name>/README.md`. Names must use lowercase letters, numbers, and single hyphens, such as `release-notes`.
+Creates a new top-level skill directory containing a valid `SKILL.md`. When creating in the repository root, it also creates `docs/skills/<name>/README.md`. Names must use lowercase letters, numbers, and single hyphens, such as `release-notes`.
 
 ```bash
 ./agent-skills create release-notes
@@ -187,7 +187,7 @@ Read each skill’s `SKILL.md` before adapting it for another agent client or wo
 
 ## Contributing
 
-Contributions are welcome. Read the [authoring guide](./docs/authoring-guide.md) and [validation guide](./docs/validation.md) before making changes. Add each new skill as its own top-level directory containing a `SKILL.md` with valid YAML frontmatter, concise trigger language, a deterministic workflow, safety rules, and validation instructions. Add a short companion guide under `docs/<skill>/README.md`, then update the skills table above.
+Contributions are welcome. Read the [authoring guide](./docs/authoring-guide.md) and [validation guide](./docs/validation.md) before making changes. Add each new skill as its own top-level directory containing a `SKILL.md` with valid YAML frontmatter, concise trigger language, a deterministic workflow, safety rules, and validation instructions. Add a short companion guide under `docs/skills/<skill>/README.md`, then update the skills table above.
 
 Create a scaffold with:
 
@@ -198,13 +198,8 @@ Create a scaffold with:
 Before opening a pull request, run the repository’s skill validator and test suite from the repository root:
 
 ```bash
-python /home/ubuntu/skills/skill-creator/scripts/quick_validate.py <skill>
 ./agent-skills validate
 python -m unittest discover -s tests -v
 ```
 
 Run the CLI test suite and also verify Markdown links and examples, test shell-specific commands in the environments they target, and confirm that the README describes the current skill inventory.
-
-```bash
-python -m unittest discover -s tests -v
-```

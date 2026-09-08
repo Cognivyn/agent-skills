@@ -15,6 +15,7 @@ CONFIG_FILE = "config.json"
 MANIFEST_FILE = "manifest.json"
 SKILL_FILE = "SKILL.md"
 SKILL_NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+EXCLUDED_DIRS = {"docs", "tests", "agent_skills", "skills"}
 
 
 class WorkspaceError(RuntimeError):
@@ -98,19 +99,10 @@ def skill_path(repository: Path, name: str) -> Path:
     return repository / name
 
 
-def validate_skill(path: Path) -> None:
-    skill_file = path / SKILL_FILE
-    if not path.is_dir() or not skill_file.is_file():
-        raise WorkspaceError(f"{path} is not a valid skill directory with {SKILL_FILE}")
-    text = skill_file.read_text(encoding="utf-8")
-    if not text.startswith("---\n") or "\nname:" not in text or "\ndescription:" not in text:
-        raise WorkspaceError(f"{skill_file} must contain YAML frontmatter with name and description")
-
-
 def available_skills(repository: Path) -> list[str]:
     result = []
     for child in repository.iterdir():
-        if child.is_dir() and not child.name.startswith(".") and child.name not in {"docs", "tests", "agent_skills"}:
+        if child.is_dir() and not child.name.startswith(".") and child.name not in EXCLUDED_DIRS:
             if (child / SKILL_FILE).is_file():
                 result.append(child.name)
     return sorted(result)
@@ -129,8 +121,14 @@ def _save_manifest(workspace: Workspace, skills: list[str]) -> None:
 
 
 def add_skill(workspace: Workspace, name: str, link: bool = False) -> str:
+    from .validation import validate_skills
+
+    reports = validate_skills(workspace.repository, [name])
+    if not reports or not reports[0].valid:
+        errors = "; ".join(reports[0].errors) if reports else "unknown validation error"
+        raise WorkspaceError(f"invalid skill '{name}': {errors}")
+
     source = skill_path(workspace.repository, name)
-    validate_skill(source)
     current = manifest_skills(workspace)
     destination = workspace.skills_dir / name
     if name in current and destination.exists():
@@ -181,7 +179,7 @@ def create_skill(repository: Path, name: str, destination: Path | None = None) -
         encoding="utf-8",
     )
     if destination is None:
-        docs_path = repository / "docs" / name / "README.md"
+        docs_path = repository / "docs" / "skills" / name / "README.md"
         docs_path.parent.mkdir(parents=True, exist_ok=True)
         docs_path.write_text(f"# {name}\n\nDocument how to use the `{name}` skill.\n", encoding="utf-8")
     return path
@@ -206,11 +204,10 @@ def remote_skills(repository: Path, remote: str = "origin", branch: str = "main"
         return []
     if result.returncode != 0:
         return []
-    excluded = {"docs", "tests", "agent_skills"}
     names = []
     for line in result.stdout.splitlines():
         name = line.strip()
-        if name and not name.startswith(".") and name not in excluded and SKILL_NAME_RE.fullmatch(name):
+        if name and not name.startswith(".") and name not in EXCLUDED_DIRS and SKILL_NAME_RE.fullmatch(name):
             names.append(name)
     return sorted(names)
 

@@ -11,4 +11,4 @@ This directory contains concise human-facing skill guides and repository-wide do
 
 ## Skill guides
 
-Each skill has a companion guide at `docs/<skill-name>/README.md`. The corresponding top-level `<skill-name>/SKILL.md` remains the authoritative workflow for agents.
+Each skill has a companion guide at `docs/skills/<skill-name>/README.md`. The corresponding top-level `<skill-name>/SKILL.md` remains the authoritative workflow for agents.

@@ -14,7 +14,7 @@ Use the CLI scaffold for new packages:
 ./agent-skills create my-skill
 ```
 
-Keep the required `SKILL.md` concise and place detailed material in `references/`, deterministic helpers in `scripts/`, and reusable assets in `templates/`. Add or update the companion guide under `docs/my-skill/README.md` and the catalog entry in `README.md`.
+Keep the required `SKILL.md` concise and place detailed material in `references/`, deterministic helpers in `scripts/`, and reusable assets in `templates/`. Add or update the companion guide under `docs/skills/my-skill/README.md` and the catalog entry in `README.md`.
 
 ## Validate
 
@@ -25,7 +25,7 @@ Run the repository validator and test suite:
 python -m unittest discover -s tests -v
 ```
 
-Run the skill-creator validator for each changed skill when available. Review links, examples, path references, and the final diff. Do not commit secrets or generated local workspace state.
+Review links, examples, path references, and the final diff. Do not commit secrets or generated local workspace state.
 
 ## Pull requests
 

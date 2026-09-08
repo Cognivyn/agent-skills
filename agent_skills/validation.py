@@ -137,6 +137,7 @@ def _cycles(repository: Path, names: list[str]) -> dict[str, str]:
     }
     found: dict[str, str] = {}
     visiting: list[str] = []
+    visited: set[str] = set()
 
     def visit(name: str) -> None:
         if name in visiting:
@@ -146,13 +147,17 @@ def _cycles(repository: Path, names: list[str]) -> dict[str, str]:
             for member in cycle[:-1]:
                 found[member] = message
             return
+        if name in visited:
+            return
         visiting.append(name)
         for dependency in graph.get(name, []):
             visit(dependency)
         visiting.pop()
+        visited.add(name)
 
     for name in names:
-        visit(name)
+        if name not in visited:
+            visit(name)
     return found
 
 
