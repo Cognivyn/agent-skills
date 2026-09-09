@@ -41,8 +41,8 @@ This skill is read-only. Do not use it to apply changes or rotate secrets.
 
 ## Workflow
 
-See [`SKILL.md`](../env-sync-infisical/SKILL.md) for the agent workflow.
+See [`SKILL.md`](../../../env-sync-infisical/SKILL.md) for the agent workflow.
 
 ## References
 
-- [`references/cli-reference.md`](../env-sync-infisical/references/cli-reference.md) — Infisical CLI command reference.
+- [`references/cli-reference.md`](../../../env-sync-infisical/references/cli-reference.md) — Infisical CLI command reference.
