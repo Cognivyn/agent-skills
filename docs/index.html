@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cognivyn Agent Skills | Open-Source Task-Focused Agent Skills</title>
+  <meta name="description" content="Open-source, task-focused skills for AI agent clients like Kilo and Claude Code. Built by Cognivyn Infrasys LLP.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-page: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-muted: #e2e8f0;
+
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-light: #64748b;
+
+      --brand-blue: #2563eb;
+      --brand-blue-hover: #1d4ed8;
+      --brand-sky: #0284c7;
+      --brand-amber: #d97706;
+      --brand-indigo: #4f46e5;
+
+      --border-color: #e2e8f0;
+      --border-strong: #cbd5e1;
+
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --radius-full: 9999px;
+
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a {
+      color: var(--brand-blue);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    a:hover {
+      color: var(--brand-blue-hover);
+    }
+
+    /* Header & Navigation */
+    header {
+      background-color: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.125rem;
+      color: var(--text-main);
+    }
+
+    .brand-logo .badge-dot {
+      width: 10px;
+      height: 10px;
+      background-color: var(--brand-blue);
+      border-radius: var(--radius-full);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    }
+
+    .brand-sub {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding-left: 0.5rem;
+      border-left: 1px solid var(--border-color);
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    nav a {
+      font-size: 0.9375rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    nav a:hover {
+      color: var(--brand-blue);
+    }
+
+    .github-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background-color: var(--text-main);
+      color: #ffffff;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .github-btn:hover {
+      color: #ffffff;
+      background-color: #1e293b;
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Main Container Layout */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 4.5rem 0 3rem 0;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background-color: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1d4ed8;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      padding: 0.35rem 0.85rem;
+      border-radius: var(--radius-full);
+      margin-bottom: 1.5rem;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+      color: var(--text-main);
+      max-width: 800px;
+      margin: 0 auto 1.25rem auto;
+    }
+
+    .hero h1 span {
+      background: linear-gradient(135deg, var(--brand-blue) 0%, var(--brand-sky) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 1.1875rem;
+      color: var(--text-muted);
+      max-width: 680px;
+      margin: 0 auto 2rem auto;
+      font-weight: 400;
+    }
+
+    /* Quick Install Command Box */
+    .hero-cli-box {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 0.75rem 1rem;
+      max-width: 540px;
+      margin: 0 auto 2.5rem auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-md);
+      font-family: var(--font-mono);
+      font-size: 0.9375rem;
+    }
+
+    .cli-text {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      color: var(--text-main);
+    }
+
+    .cli-prompt {
+      color: var(--brand-blue);
+      font-weight: 600;
+      user-select: none;
+    }
+
+    .copy-btn {
+      background-color: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 0.4rem 0.75rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.2s ease;
+      font-family: var(--font-sans);
+    }
+
+    .copy-btn:hover {
+      background-color: var(--border-color);
+      color: var(--text-main);
+    }
+
+    .copy-btn.copied {
+      background-color: #dcfce7;
+      color: #15803d;
+      border-color: #86efac;
+    }
+
+    /* Stats Banner */
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .stat-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      padding: 1.25rem;
+      border-radius: var(--radius-md);
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stat-number {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: var(--brand-blue);
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Section Styling */
+    section {
+      padding: 3.5rem 0;
+    }
+
+    .section-header {
+      margin-bottom: 2rem;
+    }
+
+    .section-header h2 {
+      font-size: 1.875rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text-main);
+      margin-bottom: 0.5rem;
+    }
+
+    .section-header p {
+      color: var(--text-muted);
+      font-size: 1.0625rem;
+    }
+
+    /* Skills Catalog Controls */
+    .skills-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .search-box {
+      position: relative;
+      flex: 1;
+      min-width: 280px;
+      max-width: 420px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 0.65rem 1rem 0.65rem 2.5rem;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      font-size: 0.9375rem;
+      color: var(--text-main);
+      outline: none;
+      transition: all 0.2s ease;
+      font-family: var(--font-sans);
+    }
+
+    .search-input:focus {
+      border-color: var(--brand-blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-light);
+      pointer-events: none;
+    }
+
+    .filter-pills {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-pill {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 0.4rem 0.85rem;
+      border-radius: var(--radius-full);
+      font-size: 0.84375rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .filter-pill:hover {
+      border-color: var(--border-strong);
+      color: var(--text-main);
+    }
+
+    .filter-pill.active {
+      background-color: var(--brand-blue);
+      color: #ffffff;
+      border-color: var(--brand-blue);
+    }
+
+    /* Skills Grid */
+    .skills-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .skill-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.25 ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .skill-card:hover {
+      border-color: #bfdbfe;
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .skill-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.85rem;
+    }
+
+    .skill-title-group {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .skill-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      background-color: #eff6ff;
+      color: var(--brand-blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1rem;
+      border: 1px solid #dbeafe;
+    }
+
+    .skill-name {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--text-main);
+      font-family: var(--font-mono);
+    }
+
+    .skill-tag {
+      font-size: 0.71875rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem;
+      border-radius: var(--radius-full);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .tag-infra {
+      background-color: #f0fdf4;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+
+    .tag-env {
+      background-color: #fefce8;
+      color: #a16207;
+      border: 1px solid #fef08a;
+    }
+
+    .tag-github {
+      background-color: #f5f3ff;
+      color: #6d28d9;
+      border: 1px solid #ddd6fe;
+    }
+
+    .tag-git {
+      background-color: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+
+    .skill-desc {
+      color: var(--text-muted);
+      font-size: 0.9375rem;
+      margin-bottom: 1.25rem;
+      line-height: 1.5;
+    }
+
+    .skill-reqs {
+      background-color: var(--bg-page);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.65rem 0.85rem;
+      font-size: 0.8125rem;
+      color: var(--text-light);
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .skill-reqs strong {
+      color: var(--text-muted);
+    }
+
+    .skill-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .cmd-preview {
+      font-family: var(--font-mono);
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      background-color: var(--bg-subtle);
+      padding: 0.35rem 0.6rem;
+      border-radius: var(--radius-sm);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+    }
+
+    .card-links {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .card-link {
+      font-size: 0.84375rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    /* Architecture & How Discovery Works Section */
+    .architecture-section {
+      background-color: #ffffff;
+      border-top: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2.5rem;
+      align-items: center;
+    }
+
+    @media (max-width: 868px) {
+      .grid-2col {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .code-snippet-box {
+      background-color: #0f172a;
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      color: #f8fafc;
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      box-shadow: var(--shadow-lg);
+      overflow-x: auto;
+    }
+
+    .code-snippet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 0.75rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid #334155;
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    .code-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .dot-red { background-color: #ef4444; }
+    .dot-yellow { background-color: #f59e0b; }
+    .dot-green { background-color: #10b981; }
+
+    .code-body {
+      line-height: 1.6;
+    }
+
+    .code-yaml-key { color: #38bdf8; }
+    .code-yaml-val { color: #fde047; }
+    .code-comment { color: #64748b; font-style: italic; }
+
+    /* CLI Showcase Section */
+    .cli-showcase {
+      padding: 4rem 0;
+    }
+
+    .cli-tabs-nav {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 1.5rem;
+    }
+
+    .cli-tab-btn {
+      padding: 0.65rem 1.25rem;
+      background: none;
+      border: none;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+      font-family: var(--font-mono);
+    }
+
+    .cli-tab-btn:hover {
+      color: var(--brand-blue);
+    }
+
+    .cli-tab-btn.active {
+      color: var(--brand-blue);
+      border-bottom-color: var(--brand-blue);
+    }
+
+    .cli-tab-content {
+      display: none;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      box-shadow: var(--shadow-md);
+    }
+
+    .cli-tab-content.active {
+      display: block;
+    }
+
+    .tab-desc {
+      margin-bottom: 1rem;
+      font-size: 1rem;
+      color: var(--text-muted);
+    }
+
+    .tab-code {
+      background-color: #0f172a;
+      color: #38bdf8;
+      padding: 1rem 1.25rem;
+      border-radius: var(--radius-md);
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Safety & Features */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .feature-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+    }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      background-color: #eff6ff;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--brand-blue);
+      margin-bottom: 1rem;
+    }
+
+    .feature-card h3 {
+      font-size: 1.125rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--text-main);
+    }
+
+    .feature-card p {
+      font-size: 0.9375rem;
+      color: var(--text-muted);
+    }
+
+    /* Footer */
+    footer {
+      background-color: var(--bg-surface);
+      border-top: 1px solid var(--border-color);
+      padding: 3.5rem 0 2rem 0;
+      margin-top: 4rem;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 2.5rem;
+      margin-bottom: 3rem;
+    }
+
+    @media (max-width: 768px) {
+      .footer-grid {
+        grid-template-columns: 1fr;
+      }
+      .hero h1 {
+        font-size: 2.25rem;
+      }
+    }
+
+    .footer-brand h4 {
+      font-size: 1.125rem;
+      font-weight: 800;
+      margin-bottom: 0.75rem;
+      color: var(--text-main);
+    }
+
+    .footer-brand p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      max-width: 320px;
+      line-height: 1.6;
+    }
+
+    .footer-col h5 {
+      font-size: 0.875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-main);
+      margin-bottom: 1rem;
+    }
+
+    .footer-col ul {
+      list-style: none;
+    }
+
+    .footer-col li {
+      margin-bottom: 0.6rem;
+    }
+
+    .footer-col a {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    .footer-col a:hover {
+      color: var(--brand-blue);
+    }
+
+    .footer-bottom {
+      border-top: 1px solid var(--border-color);
+      padding-top: 1.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8125rem;
+      color: var(--text-light);
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background-color: #0f172a;
+      color: #ffffff;
+      padding: 0.75rem 1.25rem;
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header>
+    <div class="nav-container">
+      <a href="https://cognivyn.in" class="brand-logo" target="_blank" rel="noopener">
+        <span class="badge-dot"></span>
+        COGNIVYN
+        <span class="brand-sub">The Infrasys Meridian</span>
+      </a>
+      <nav>
+        <a href="#skills">Skills Catalog</a>
+        <a href="#cli">CLI Quickstart</a>
+        <a href="#architecture">Architecture</a>
+        <a href="https://cognivyn.in" target="_blank" rel="noopener">Cognivyn.in</a>
+        <a href="https://github.com/Cognivyn/agent-skills" class="github-btn" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub Repo
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+        Founder-Led Engineering Practice × Open-Source Agent Skills
+      </div>
+      <h1>Task-Focused Agent Skills for <span>Kilo, Claude Code & AI Clients</span></h1>
+      <p>Modular, self-contained skills with standardized discovery contracts, dependency verification, and strict safety boundaries.</p>
+
+      <div class="hero-cli-box">
+        <div class="cli-text">
+          <span class="cli-prompt">$</span>
+          <span>./agent-skills init &amp;&amp; ./agent-skills add git-clean</span>
+        </div>
+        <button class="copy-btn" onclick="copyToClipboard('./agent-skills init && ./agent-skills add git-clean', this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy
+        </button>
+      </div>
+
+      <div class="hero-stats">
+        <div class="stat-card">
+          <div class="stat-number">4</div>
+          <div class="stat-label">Production Skills</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">0</div>
+          <div class="stat-label">External CLI Dependencies</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">100%</div>
+          <div class="stat-label">Frontmatter &amp; Safety Validated</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Skills Catalog Section -->
+    <section id="skills">
+      <div class="section-header">
+        <h2>Available Agent Skills</h2>
+        <p>Self-contained directories featuring `SKILL.md` workflows that AI agents discover dynamically.</p>
+      </div>
+
+      <div class="skills-controls">
+        <div class="search-box">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" id="searchInput" class="search-input" placeholder="Search skills by name, tag, or requirement..." onkeyup="filterSkills()">
+        </div>
+        <div class="filter-pills">
+          <button class="filter-pill active" onclick="setCategory('all', this)">All Skills</button>
+          <button class="filter-pill" onclick="setCategory('infrastructure', this)">Infrastructure</button>
+          <button class="filter-pill" onclick="setCategory('environment', this)">Environment</button>
+          <button class="filter-pill" onclick="setCategory('github', this)">GitHub</button>
+          <button class="filter-pill" onclick="setCategory('git', this)">Git Workflow</button>
+        </div>
+      </div>
+
+      <div class="skills-grid" id="skillsGrid">
+        <!-- Skill 1 -->
+        <div class="skill-card" data-category="infrastructure" data-search="bun dokploy infisical docker compose traefik deployment">
+          <div>
+            <div class="skill-card-header">
+              <div class="skill-title-group">
+                <div class="skill-icon">B</div>
+                <div class="skill-name">bun-dokploy-infisical</div>
+              </div>
+              <span class="skill-tag tag-infra">Infrastructure</span>
+            </div>
+            <p class="skill-desc">Generate Bun monorepo Dockerfile and Compose deployment assets for Dokploy, Traefik, and Infisical runtime secret injection.</p>
+            <div class="skill-reqs">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span><strong>Requires:</strong> Bun, Docker Compose, Dokploy, Traefik, Infisical</span>
+            </div>
+          </div>
+          <div class="skill-footer">
+            <span class="cmd-preview">./agent-skills add bun-dokploy-infisical</span>
+            <div class="card-links">
+              <button class="copy-btn" onclick="copyToClipboard('./agent-skills add bun-dokploy-infisical', this)">Copy</button>
+              <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/bun-dokploy-infisical/README.md" class="card-link" target="_blank">Docs &rarr;</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Skill 2 -->
+        <div class="skill-card" data-category="environment" data-search="env sync infisical audit secrets drift .env.example">
+          <div>
+            <div class="skill-card-header">
+              <div class="skill-title-group">
+                <div class="skill-icon">E</div>
+                <div class="skill-name">env-sync-infisical</div>
+              </div>
+              <span class="skill-tag tag-env">Environment</span>
+            </div>
+            <p class="skill-desc">Audit monorepo .env.example files against env-var usage and Infisical secrets, then report gaps and drift across environments.</p>
+            <div class="skill-reqs">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span><strong>Requires:</strong> Infisical CLI with active login session</span>
+            </div>
+          </div>
+          <div class="skill-footer">
+            <span class="cmd-preview">./agent-skills add env-sync-infisical</span>
+            <div class="card-links">
+              <button class="copy-btn" onclick="copyToClipboard('./agent-skills add env-sync-infisical', this)">Copy</button>
+              <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/env-sync-infisical/README.md" class="card-link" target="_blank">Docs &rarr;</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Skill 3 -->
+        <div class="skill-card" data-category="github" data-search="gh issue create github cli markdown plan checklist">
+          <div>
+            <div class="skill-card-header">
+              <div class="skill-title-group">
+                <div class="skill-icon">G</div>
+                <div class="skill-name">gh-issue-create</div>
+              </div>
+              <span class="skill-tag tag-github">GitHub</span>
+            </div>
+            <p class="skill-desc">Create a GitHub issue directly from the active repository context, including structured implementation plans or Markdown checklists.</p>
+            <div class="skill-reqs">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span><strong>Requires:</strong> GitHub CLI (`gh`) installed and authenticated</span>
+            </div>
+          </div>
+          <div class="skill-footer">
+            <span class="cmd-preview">./agent-skills add gh-issue-create</span>
+            <div class="card-links">
+              <button class="copy-btn" onclick="copyToClipboard('./agent-skills add gh-issue-create', this)">Copy</button>
+              <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/gh-issue-create/README.md" class="card-link" target="_blank">Docs &rarr;</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Skill 4 -->
+        <div class="skill-card" data-category="git" data-search="git clean main origin sync synchronize safe rebase">
+          <div>
+            <div class="skill-card-header">
+              <div class="skill-title-group">
+                <div class="skill-icon">S</div>
+                <div class="skill-name">git-clean</div>
+              </div>
+              <span class="skill-tag tag-git">Git Workflow</span>
+            </div>
+            <p class="skill-desc">Safely synchronize local `main` branch with `origin` without losing local work, uncommitted changes, or applying destructive hard resets.</p>
+            <div class="skill-reqs">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span><strong>Requires:</strong> Git installed with an configured `origin` remote</span>
+            </div>
+          </div>
+          <div class="skill-footer">
+            <span class="cmd-preview">./agent-skills add git-clean</span>
+            <div class="card-links">
+              <button class="copy-btn" onclick="copyToClipboard('./agent-skills add git-clean', this)">Copy</button>
+              <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/git-clean/README.md" class="card-link" target="_blank">Docs &rarr;</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Architecture & Discovery Contract -->
+    <section id="architecture" class="architecture-section" style="margin: 3rem -1.5rem; padding: 4rem 1.5rem;">
+      <div class="container">
+        <div class="grid-2col">
+          <div>
+            <div class="hero-badge" style="background-color: #f0fdf4; border-color: #bbf7d0; color: #15803d;">
+              Discovery Contract Architecture
+            </div>
+            <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 1rem;">How Agent Discovery Works</h2>
+            <p style="color: var(--text-muted); font-size: 1.0625rem; margin-bottom: 1.5rem;">
+              Agent clients (such as Kilo or Claude Code) scan configured skills directories for folders containing a valid <code>SKILL.md</code>.
+            </p>
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.9375rem; color: var(--text-muted);">
+              <li style="display: flex; gap: 0.75rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span><strong>YAML Frontmatter Trigger:</strong> The <code>name</code> and <code>description</code> declare exactly when an agent invokes the skill.</span>
+              </li>
+              <li style="display: flex; gap: 0.75rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span><strong>Self-Contained Isolation:</strong> Package assets like scripts or templates stay inside top-level skill folders.</span>
+              </li>
+              <li style="display: flex; gap: 0.75rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span><strong>Zero External Dependencies:</strong> Built with Python standard library only for max portability across environments.</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="code-snippet-box">
+            <div class="code-snippet-header">
+              <div class="code-dots">
+                <div class="dot dot-red"></div>
+                <div class="dot dot-yellow"></div>
+                <div class="dot dot-green"></div>
+              </div>
+              <span>git-clean/SKILL.md</span>
+            </div>
+            <div class="code-body">
+              <span class="code-comment">---</span><br>
+              <span class="code-yaml-key">name</span>: <span class="code-yaml-val">git-clean</span><br>
+              <span class="code-yaml-key">description</span>: ><br>
+              &nbsp;&nbsp;<span class="code-yaml-val">Safely synchronize a local main branch with origin</span><br>
+              &nbsp;&nbsp;<span class="code-yaml-val">without losing local work or running git reset --hard.</span><br>
+              <span class="code-yaml-key">metadata</span>:<br>
+              &nbsp;&nbsp;<span class="code-yaml-key">dependencies</span>: []<br>
+              <span class="code-comment">---</span><br><br>
+              <span class="code-comment"># Workflow</span><br>
+              1. Check for uncommitted local changes.<br>
+              2. Fetch latest updates from origin.<br>
+              3. Safely rebase or fast-forward...
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLI Showcase Section -->
+    <section id="cli" class="cli-showcase">
+      <div class="section-header">
+        <h2>Dependency-Free CLI Management</h2>
+        <p>Manage agent skills with the lightweight Python standard library CLI tool.</p>
+      </div>
+
+      <div class="cli-tabs-nav">
+        <button class="cli-tab-btn active" onclick="switchTab('init', this)">init</button>
+        <button class="cli-tab-btn" onclick="switchTab('list', this)">list</button>
+        <button class="cli-tab-btn" onclick="switchTab('validate', this)">validate</button>
+        <button class="cli-tab-btn" onclick="switchTab('add', this)">add</button>
+        <button class="cli-tab-btn" onclick="switchTab('remove', this)">remove</button>
+      </div>
+
+      <div id="tab-init" class="cli-tab-content active">
+        <p class="tab-desc">Initializes local workspace config and creates the target skills directory (defaults to <code>$HOME/.agents/skills</code>).</p>
+        <div class="tab-code">
+          <span>$ ./agent-skills init</span>
+          <button class="copy-btn" onclick="copyToClipboard('./agent-skills init', this)">Copy</button>
+        </div>
+      </div>
+
+      <div id="tab-list" class="cli-tab-content">
+        <p class="tab-desc">Lists repository skills and labels each local skill as <code>available</code> or <code>added</code> alongside tracking remote branch status.</p>
+        <div class="tab-code">
+          <span>$ ./agent-skills list</span>
+          <button class="copy-btn" onclick="copyToClipboard('./agent-skills list', this)">Copy</button>
+        </div>
+      </div>
+
+      <div id="tab-validate" class="cli-tab-content">
+        <p class="tab-desc">Verifies YAML frontmatter, validates skill folder name parity, and detects missing dependencies or circular dependency chains.</p>
+        <div class="tab-code">
+          <span>$ ./agent-skills validate</span>
+          <button class="copy-btn" onclick="copyToClipboard('./agent-skills validate', this)">Copy</button>
+        </div>
+      </div>
+
+      <div id="tab-add" class="cli-tab-content">
+        <p class="tab-desc">Validates and copies (or symlinks with <code>--link</code>) skills directly into your agent client's skills directory.</p>
+        <div class="tab-code">
+          <span>$ ./agent-skills add git-clean gh-issue-create --link</span>
+          <button class="copy-btn" onclick="copyToClipboard('./agent-skills add git-clean gh-issue-create --link', this)">Copy</button>
+        </div>
+      </div>
+
+      <div id="tab-remove" class="cli-tab-content">
+        <p class="tab-desc">Safely removes manifest-managed skills without touching unmanaged external skill directories.</p>
+        <div class="tab-code">
+          <span>$ ./agent-skills remove git-clean</span>
+          <button class="copy-btn" onclick="copyToClipboard('./agent-skills remove git-clean', this)">Copy</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Safety & Architectural Guarantees -->
+    <section>
+      <div class="section-header">
+        <h2>Safety &amp; Reliability Guarantees</h2>
+        <p>Built with engineering discipline so agent execution remains predictable and safe.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h3>Non-Destructive Workflows</h3>
+          <p>Skills like <code>git-clean</code> never perform hard resets or clean uncommitted files without explicit user intervention.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <h3>Dependency Cycle Check</h3>
+          <p>Validation engine continuously checks frontmatter dependencies to eliminate circular deadlocks before addition.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <h3>Companion Documentation</h3>
+          <p>Every skill maintains both an agent workflow (<code>SKILL.md</code>) and a human companion guide under <code>docs/skills/</code>.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <h4>COGNIVYN INFRASYS LLP</h4>
+          <p>Founder-led engineering practice combining structural engineering, custom software, and AI-assisted workflows.</p>
+        </div>
+        <div class="footer-col">
+          <h5>Agent Skills</h5>
+          <ul>
+            <li><a href="#skills">bun-dokploy-infisical</a></li>
+            <li><a href="#skills">env-sync-infisical</a></li>
+            <li><a href="#skills">gh-issue-create</a></li>
+            <li><a href="#skills">git-clean</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h5>Cognivyn Practices</h5>
+          <ul>
+            <li><a href="https://cognivyn.in/#software-ai" target="_blank" rel="noopener">Software &amp; AI</a></li>
+            <li><a href="https://cognivyn.in/#structural-ai" target="_blank" rel="noopener">Structural Engineering + AI</a></li>
+            <li><a href="https://cognivyn.in/planeev" target="_blank" rel="noopener">Planeev Sketch-to-CAD</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h5>Company</h5>
+          <ul>
+            <li><a href="https://cognivyn.in/about" target="_blank" rel="noopener">About Cognivyn</a></li>
+            <li><a href="https://cognivyn.in/contact" target="_blank" rel="noopener">Contact &amp; Services</a></li>
+            <li><a href="https://github.com/Cognivyn" target="_blank" rel="noopener">GitHub Organization</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>© 2026 Cognivyn Infrasys LLP. All rights reserved.</span>
+        <span>Open-source skills licensed under MIT.</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+    <span id="toastMsg">Command copied to clipboard!</span>
+  </div>
+
+  <script>
+    // Copy to clipboard helper
+    function copyToClipboard(text, btnElement) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Copied to clipboard: ' + text);
+        if (btnElement) {
+          const originalText = btnElement.innerText;
+          btnElement.innerText = 'Copied!';
+          btnElement.classList.add('copied');
+          setTimeout(() => {
+            btnElement.innerText = originalText;
+            btnElement.classList.remove('copied');
+          }, 2000);
+        }
+      }).catch(err => {
+        console.error('Failed to copy: ', err);
+      });
+    }
+
+    // Toast notification
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      toastMsg.innerText = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
+
+    // Filter skills by search and category
+    let currentCategory = 'all';
+
+    function setCategory(category, btn) {
+      currentCategory = category;
+      document.querySelectorAll('.filter-pill').forEach(pill => pill.classList.remove('active'));
+      btn.classList.add('active');
+      filterSkills();
+    }
+
+    function filterSkills() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const cards = document.querySelectorAll('.skill-card');
+
+      cards.forEach(card => {
+        const category = card.getAttribute('data-category');
+        const searchData = card.getAttribute('data-search').toLowerCase();
+        const textContent = card.innerText.toLowerCase();
+
+        const matchesCategory = (currentCategory === 'all' || category === currentCategory);
+        const matchesSearch = textContent.includes(query) || searchData.includes(query);
+
+        if (matchesCategory && matchesSearch) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    // CLI Tab switching
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.cli-tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.cli-tab-content').forEach(c => c.classList.remove('active'));
+
+      btn.classList.add('active');
+      document.getElementById('tab-' + tabId).classList.add('active');
+    }
+  </script>
+</body>
+</html>
