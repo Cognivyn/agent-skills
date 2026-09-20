@@ -65,8 +65,10 @@ Execute target interaction using the resolved ref:
 - Key Press: `agent-browser press <key>`
 
 If a step is marked `sensitive: true`:
-- Redact value from console output and manifest logs.
-- Mask target field in screenshots unless explicit user override `--allow-sensitive-capture` is enabled.
+- Sensitive values are passed via environment variables, avoiding process argument exposure (`CWE-214`).
+- Require HTTPS transport for non-local hosts (`CWE-319`).
+- Redact values from console output and manifest logs (`[REDACTED]`).
+- Blurs and masks sensitive target fields in screenshots (`CWE-200`) unless explicit user override `--allow-sensitive-capture` is enabled.
 
 #### C. Wait Strategy
 Prior to taking a screenshot, enforce settling:
@@ -82,9 +84,9 @@ agent-browser screenshot ./journey-screenshots/<journey-name>/<NN>-<step-slug>.p
 - Example filenames: `01-landing-page.png`, `02-signup-form.png`, `03-welcome.png`.
 - Multi-shot sub-steps use letter suffixes: `03a-form-filled.png`, `03b-validation-error.png`.
 
-#### E. Modal & State Checks
+#### E. Modal, Redirect & State Checks
 - Modal dialogs should be handled as explicit journey steps.
-- If an unhandled modal or unexpected blocking element appears, pause execution and report error. Do not blindly dismiss dialogs.
+- Verify page origin after interactions and redirects to prevent cross-origin escapes (`CWE-346`) unless `--allow-cross-origin` is passed.
 - Loop detection: If identical URL + DOM snapshot hash repeats 3 times without progress, abort and report stuck journey.
 
 ### 4. Manifest Generation & Cleanup
@@ -113,9 +115,10 @@ Use the provided scripts to execute and validate journeys without cluttering age
 ## Safety Rules & Guardrails
 
 - **Destructive Actions Deny-list**: Automatically block actions containing `delete`, `remove`, `cancel account`, `unsubscribe`, `purge`, `destroy` unless explicitly overridden with `--allow-destructive`.
-- **Credential Hygiene**: Credentials must come strictly from environment variables. Never print, write to `journey.json`, or log passwords/tokens.
+- **Credential & Secret Hygiene**: Pass secrets via environment variables to avoid process argument exposure (`CWE-214`). Require HTTPS transport for sensitive non-local inputs (`CWE-319`). Never write passwords or tokens to logs or `journey.json`.
+- **Masking**: Mask sensitive fields prior to screenshot capture (`CWE-200`) unless `--allow-sensitive-capture` is explicitly granted.
+- **Same-Origin Enforcement**: Validate current URL origin post-interaction to stop cross-origin redirects (`CWE-346`) unless `--allow-cross-origin` is passed.
 - **Session Cleanup**: Always close open sessions via exit trap (`agent-browser --session <name> close`), even upon error or failure.
-- **Same-Origin Enforcement**: Restrict navigation to same-origin URLs unless `--allow-cross-origin` is passed.
 - **Timeouts**: Per-step timeout max 30s; global journey timeout max 600s.
 
 ## Required Report
