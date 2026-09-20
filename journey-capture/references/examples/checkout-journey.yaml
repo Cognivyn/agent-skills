@@ -1,0 +1,46 @@
+name: checkout-journey
+description: E-commerce checkout journey capturing cart, shipping details, payment, and order confirmation.
+start_url: "https://example.com/cart"
+viewport:
+  width: 1280
+  height: 800
+steps:
+  - name: cart-view
+    description: Shopping cart overview
+    action: wait
+    value: "networkidle"
+
+  - name: proceed-to-checkout
+    description: Click checkout button
+    action: click
+    target: "Proceed to Checkout button"
+    wait_for_text: "Shipping Address"
+
+  - name: shipping-address
+    description: Enter shipping address details
+    action: fill
+    target: "Street address input"
+    value: "123 Main Street"
+
+  - name: continue-to-payment
+    description: Move to payment step
+    action: click
+    target: "Continue to Payment button"
+
+  - name: enter-payment
+    description: Enter credit card credentials
+    action: fill
+    target: "Card number input"
+    value: "${TEST_CARD_NUMBER}"
+    sensitive: true
+
+  - name: confirm-order
+    description: Place order
+    action: click
+    target: "Place Order button"
+    wait_for_text: "Thank you for your order"
+
+  - name: order-confirmation
+    description: Final confirmation screen
+    action: wait
+    value: "networkidle"

@@ -1,0 +1,39 @@
+name: onboarding-journey
+description: User onboarding flow with multi-step wizard, preference selection, and workspace creation.
+start_url: "https://example.com/onboarding"
+viewport:
+  width: 1280
+  height: 800
+steps:
+  - name: step-1-profile
+    description: Initial profile setup screen
+    action: fill
+    target: "Display name input"
+    value: "Alex Dev"
+
+  - name: step-1-next
+    description: Click next on profile setup
+    action: click
+    target: "Next step button"
+
+  - name: step-2-team
+    description: Team preferences selection
+    action: click
+    target: "Engineering team option"
+
+  - name: step-2-next
+    description: Advance to workspace creation
+    action: click
+    target: "Continue button"
+
+  - name: step-3-workspace
+    description: Enter workspace name
+    action: fill
+    target: "Workspace name input"
+    value: "Cognivyn Lab"
+
+  - name: finish-onboarding
+    description: Complete onboarding wizard
+    action: click
+    target: "Get Started button"
+    wait_for_text: "Dashboard"

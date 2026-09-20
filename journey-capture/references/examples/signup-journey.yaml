@@ -1,0 +1,37 @@
+name: signup-journey
+description: Standard user signup flow capturing landing page, form completion, and welcome dashboard.
+start_url: "https://example.com/signup"
+viewport:
+  width: 1280
+  height: 800
+steps:
+  - name: landing-page
+    description: Initial landing page view
+    action: wait
+    value: "networkidle"
+    full_page: false
+
+  - name: enter-email
+    description: Fill user email address
+    action: fill
+    target: "Email input field"
+    value: "${TEST_USER_EMAIL}"
+    sensitive: false
+
+  - name: enter-password
+    description: Fill user account password
+    action: fill
+    target: "Password input field"
+    value: "${TEST_USER_PASSWORD}"
+    sensitive: true
+
+  - name: submit-signup
+    description: Click create account button
+    action: click
+    target: "Create Account button"
+    wait_for_text: "Welcome"
+
+  - name: welcome-dashboard
+    description: Post-signup dashboard landing
+    action: wait
+    value: "networkidle"

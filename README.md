@@ -10,6 +10,7 @@ Open-source, task-focused skills for agent clients such as [Kilo](https://kilo.a
 | [`env-sync-infisical`](./env-sync-infisical/) | Audit a monorepo .env.example files against env-var usage and Infisical secrets, then report gaps and drift across environments | Infisical CLI with an active login session | [Overview](./docs/skills/env-sync-infisical/README.md) · [`SKILL.md`](./env-sync-infisical/SKILL.md) |
 | [`gh-issue-create`](./gh-issue-create/) | Create a GitHub issue from the current repository, including a plan or Markdown checklist | GitHub CLI (`gh`) installed and authenticated | [Overview](./docs/skills/gh-issue-create/README.md) · [`SKILL.md`](./gh-issue-create/SKILL.md) |
 | [`git-clean`](./git-clean/) | Safely synchronize the local `main` branch with `origin` without losing local work | Git and an `origin` remote | [Overview](./docs/skills/git-clean/README.md) · [`SKILL.md`](./git-clean/SKILL.md) |
+| [`journey-capture`](./journey-capture/) | Automate step-by-step screenshot capture across web app user journeys (signup, checkout, onboarding) using `agent-browser`. Produces numbered screenshots plus a `journey.json` manifest | `agent-browser` CLI installed | [Overview](./docs/skills/journey-capture/README.md) · [`SKILL.md`](./journey-capture/SKILL.md) |
 
 The [skill-specific documentation](./docs/skills/) contains concise usage and safety notes. The corresponding `SKILL.md` is the authoritative workflow an agent follows.
 
