@@ -131,7 +131,6 @@ def parse_journey(filepath):
     except json.JSONDecodeError:
         pass
 
-    # Indentation-aware lightweight YAML parser for journey schemas
     data = {'name': '', 'start_url': '', 'viewport': {}, 'before_journey': [], 'steps': []}
     lines = content.splitlines()
 
@@ -139,14 +138,18 @@ def parse_journey(filepath):
     current_item = None
 
     for line in lines:
+        if '#' in line:
+            parts = re.split(r'\s+#', line, 1)
+            line = parts[0]
+
         stripped = line.strip()
-        if not stripped or stripped.startswith('#'):
+        if not stripped:
             continue
 
         indent = len(line) - len(line.lstrip())
 
         if indent == 0:
-            if current_item and current_section:
+            if current_item and current_section in ('before_journey', 'steps'):
                 data[current_section].append(current_item)
                 current_item = None
 
@@ -166,7 +169,10 @@ def parse_journey(filepath):
 
         if current_section == 'viewport' and ':' in stripped:
             k, v = stripped.split(':', 1)
-            data['viewport'][k.strip()] = int(v.strip())
+            try:
+                data['viewport'][k.strip()] = int(v.strip())
+            except ValueError:
+                pass
         elif current_section in ('before_journey', 'steps'):
             if stripped.startswith('- '):
                 if current_item:
@@ -200,21 +206,23 @@ def resolve_env_vars(val, step_name):
         resolved = os.getenv(var_name)
         if resolved is None:
             print(f"Error: Environment variable '{var_name}' required for step '{step_name}' is not set.")
-            sys.exit(1)
-        return resolved
-    return val
+            return None, False
+        return resolved, True
+    return val, True
 
 def check_destructive(step_name, action, target, raw_val):
     step_str = f"{action} {target} {raw_val}".lower()
     if not allow_destructive and any(kw in step_str for kw in DESTRUCTIVE_KEYWORDS):
         print(f"Error: Step '{step_name}' contains potentially destructive action keyword. Pass --allow-destructive to run.")
-        sys.exit(1)
+        return False
+    return True
 
 def check_transport(step_name, current_url, is_sensitive):
     parsed = urlparse(current_url)
     if is_sensitive and parsed.scheme == "http" and parsed.hostname not in LOCAL_HOSTS:
         print(f"Error: Step '{step_name}' handles sensitive input over unencrypted HTTP ({current_url}) (CWE-319). HTTPS required.")
-        sys.exit(1)
+        return False
+    return True
 
 # ==========================================
 # 3. Agent-Browser CLI Command Module
@@ -242,6 +250,10 @@ def check_origin(initial_origin):
         return False
     return True
 
+def get_cli_version():
+    out, _, code = run_agent_cmd(["--version"])
+    return out.strip() if code == 0 and out else "agent-browser"
+
 # ==========================================
 # 4. Element Target Ref Resolution Module
 # ==========================================
@@ -266,7 +278,6 @@ def resolve_target_ref(target):
             continue
         ref = "@" + match.group(1)
 
-        # Require all meaningful non-generic words to match
         if meaningful_words and not all(w in line_clean for w in meaningful_words):
             continue
 
@@ -279,7 +290,6 @@ def resolve_target_ref(target):
             best_ref = ref
 
     if not best_ref and not meaningful_words:
-        # Strict fall-back if target consists entirely of words
         for line in snapshot_out.splitlines():
             if target_clean in line.lower() and '[ref=' in line:
                 match = re.search(r'\[ref=(e\d+)\]', line)
@@ -299,15 +309,14 @@ def mask_sensitive_elements():
     (function() {
         const saved = [];
         document.querySelectorAll('input, select, textarea, [sensitive]').forEach(el => {
-            if (el.type === 'password' || el.hasAttribute('sensitive') || (el.name && el.name.includes('password')) || (el.id && el.id.includes('password'))) {
-                saved.push({ element: el, prevFilter: el.style.filter || '' });
-                el.style.filter = 'blur(10px) brightness(0.5)';
-            }
+            saved.push({ element: el, prevFilter: el.style.filter || '' });
+            el.style.filter = 'blur(10px) brightness(0.5)';
         });
         window.__journey_masked_styles = saved;
     })();
     """
-    run_agent_cmd(["eval", mask_js])
+    out, err, code = run_agent_cmd(["eval", mask_js])
+    return code == 0
 
 def unmask_sensitive_elements():
     unmask_js = """
@@ -366,6 +375,7 @@ session_name = f"{journey_name}-session"
 initial_origin = urlparse(start_url).netloc
 start_time = time.time()
 manifest_steps = []
+overall_success = False
 
 def execute_action(step_name, action, target, val, is_sensitive):
     ref = None
@@ -381,6 +391,10 @@ def execute_action(step_name, action, target, val, is_sensitive):
     elif action == 'press' and val:
         out, err, code = run_agent_cmd(["press", str(val)])
     elif action == 'navigate' and val:
+        # Validate destination URL transport if sensitive
+        check_url = str(val)
+        if is_sensitive and not check_transport(step_name, check_url, is_sensitive):
+            return False, f"Insecure destination URL '{check_url}' for sensitive step"
         out, err, code = run_agent_cmd(["open", str(val)])
     elif action == 'wait':
         if str(val).lower() == 'networkidle':
@@ -388,7 +402,7 @@ def execute_action(step_name, action, target, val, is_sensitive):
         else:
             out, err, code = run_agent_cmd(["wait", "--text", str(val)])
     else:
-        out, err, code = "", "", 0
+        return False, f"Unsupported action '{action}'"
 
     if code != 0:
         return False, f"Action '{action}' failed: {err if err else out}"
@@ -404,7 +418,10 @@ try:
     if viewport:
         vw = viewport.get('width', 1280)
         vh = viewport.get('height', 800)
-        run_agent_cmd(["viewport", str(vw), str(vh)])
+        v_out, v_err, v_code = run_agent_cmd(["viewport", str(vw), str(vh)])
+        if v_code != 0:
+            print(f"Error setting viewport {vw}x{vh}: {v_err if v_err else v_out}")
+            sys.exit(1)
 
     # Execute Setup Steps (before_journey)
     for idx, b_step in enumerate(before_journey, 1):
@@ -415,14 +432,18 @@ try:
         b_action = b_step.get('action', 'wait')
         b_target = b_step.get('target', '')
         b_raw_val = b_step.get('value', '')
-        b_val = resolve_env_vars(b_raw_val, f"before_journey-{idx}")
+        b_val, ok_env = resolve_env_vars(b_raw_val, f"before_journey-{idx}")
+        if not ok_env:
+            sys.exit(1)
         b_sens = b_step.get('sensitive', False)
 
-        check_destructive(f"before_journey-{idx}", b_action, b_target, b_raw_val)
+        if not check_destructive(f"before_journey-{idx}", b_action, b_target, b_raw_val):
+            sys.exit(1)
 
         url_out, _, _ = run_agent_cmd(["eval", "window.location.href"])
         cur_url = url_out.strip().strip('"\'') if url_out else start_url
-        check_transport(f"before_journey-{idx}", cur_url, b_sens)
+        if not check_transport(f"before_journey-{idx}", cur_url, b_sens):
+            sys.exit(1)
 
         print(f"Executing Setup Step {idx}: [{b_action}] {b_target}".strip())
         ok, err_msg = execute_action(f"before_journey-{idx}", b_action, b_target, b_val, b_sens)
@@ -450,15 +471,22 @@ try:
         action = step.get('action', 'wait')
         target = step.get('target', '')
         raw_val = step.get('value', '')
-        val = resolve_env_vars(raw_val, step_name)
+        val, ok_env = resolve_env_vars(raw_val, step_name)
+        if not ok_env:
+            sys.exit(1)
         is_sensitive = step.get('sensitive', False)
 
         url_out, _, _ = run_agent_cmd(["eval", "window.location.href"])
         cur_url = url_out.strip().strip('"\'') if url_out else start_url
-        check_transport(step_name, cur_url, is_sensitive)
-        check_destructive(step_name, action, target, raw_val)
 
-        log_val = "[REDACTED]" if is_sensitive and not allow_sensitive else val
+        if not check_transport(step_name, cur_url, is_sensitive):
+            sys.exit(1)
+
+        if not check_destructive(step_name, action, target, raw_val):
+            sys.exit(1)
+
+        # CWE-532 Fix: NEVER print secret values to console output or CI logs
+        log_val = "[REDACTED]" if is_sensitive else val
         print(f"Executing Step {idx:02d}: {step_name} [{action}] {target} {log_val if log_val else ''}".strip())
 
         ok, err_msg = execute_action(step_name, action, target, val, is_sensitive)
@@ -470,6 +498,9 @@ try:
                 "filename": img_name,
                 "action": action,
                 "sensitive": is_sensitive,
+                "url": cur_url,
+                "viewport": f"{viewport.get('width', 1280)}x{viewport.get('height', 800)}",
+                "full_page": step.get('full_page', False),
                 "status": "failed",
                 "error": err_msg
             })
@@ -491,9 +522,11 @@ try:
 
         time.sleep(0.25)
 
-        # Screenshot Capture with Masking Style Preservation
+        # Sensitive Screenshot Masking with Failure Handling
         if is_sensitive and not allow_sensitive:
-            mask_sensitive_elements()
+            if not mask_sensitive_elements():
+                print(f"Error: Failed to mask sensitive elements in Step {idx:02d}. Aborting capture to prevent secret leak (CWE-200).")
+                sys.exit(1)
 
         cmd_screen = ["screenshot", img_path]
         if step.get('full_page', False):
@@ -507,6 +540,10 @@ try:
             print(f"Error capturing screenshot in Step {idx:02d}: {s_err if s_err else s_out}")
             sys.exit(1)
 
+        # Fetch current page URL for manifest metadata
+        post_url_out, _, _ = run_agent_cmd(["eval", "window.location.href"])
+        post_url = post_url_out.strip().strip('"\'') if post_url_out else cur_url
+
         manifest_steps.append({
             "step": idx,
             "name": step_name,
@@ -514,40 +551,47 @@ try:
             "action": action,
             "sensitive": is_sensitive,
             "value": "[REDACTED]" if is_sensitive else str(raw_val),
+            "url": post_url,
+            "viewport": f"{viewport.get('width', 1280)}x{viewport.get('height', 800)}",
+            "full_page": step.get('full_page', False),
             "status": "completed"
         })
+
+    overall_success = (len(manifest_steps) == len(steps))
 
 finally:
     print(f"Cleaning up browser session ({session_name})...")
     subprocess.run(["agent-browser", "--session", session_name, "close"], capture_output=True, text=True)
 
-# Write Manifest
-manifest = {
-    "journey_name": journey_name,
-    "start_url": start_url,
-    "timestamp": datetime.now(timezone.utc).isoformat(),
-    "output_directory": output_dir,
-    "steps": manifest_steps,
-    "status": "completed" if len(manifest_steps) == len(steps) else "failed"
-}
+    # Write Manifest in finally block so failed runs retain journey.json
+    manifest = {
+        "journey_name": journey_name,
+        "start_url": start_url,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "agent_browser_version": get_cli_version(),
+        "output_directory": output_dir,
+        "steps": manifest_steps,
+        "status": "completed" if overall_success else "failed"
+    }
 
-manifest_path = os.path.join(output_dir, "journey.json")
-with open(manifest_path, "w", encoding="utf-8") as f:
-    json.dump(manifest, f, indent=2)
+    manifest_path = os.path.join(output_dir, "journey.json")
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2)
 
-# ==========================================
-# 7. Terminal Summary Report Output
-# ==========================================
-print("\n## journey-capture\n")
-print(f"**Journey**: {journey_name}")
-print(f"**Start URL**: {start_url}")
-print(f"**Output Directory**: {output_dir}")
-print(f"**Screenshots Captured**: {len(manifest_steps)} step(s)")
-print(f"**Manifest**: {manifest_path}\n")
-print("| Step | Name | Filename | Status |")
-print("| --- | --- | --- | --- |")
-for s in manifest_steps:
-    status_str = "Success" if s["status"] == "completed" else "Failed"
-    print(f"| {s['step']:02d} | {s['name']} | {s['filename']} | {status_str} |")
-print("\nJourney execution complete.")
+    # Output Terminal Summary Report
+    print("\n## journey-capture\n")
+    print(f"**Journey**: {journey_name}")
+    print(f"**Start URL**: {start_url}")
+    print(f"**Output Directory**: {output_dir}")
+    print(f"**Screenshots Captured**: {len(manifest_steps)} step(s)")
+    print(f"**Manifest**: {manifest_path}\n")
+    print("| Step | Name | Filename | Status |")
+    print("| --- | --- | --- | --- |")
+    for s in manifest_steps:
+        status_str = "Success" if s["status"] == "completed" else "Failed"
+        print(f"| {s['step']:02d} | {s['name']} | {s['filename']} | {status_str} |")
+    print("\nJourney execution complete.")
+
+if not overall_success:
+    sys.exit(1)
 PYEOF
