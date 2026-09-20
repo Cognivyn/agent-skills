@@ -102,6 +102,7 @@ import json
 import re
 import subprocess
 import time
+import uuid
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
@@ -229,10 +230,13 @@ def check_transport(step_name, current_url, is_sensitive):
 # ==========================================
 session_name = ""
 
-def run_agent_cmd(args):
+def run_agent_cmd(args, env_vars=None):
     cmd = ["agent-browser"] + args + ["--session", session_name]
+    env = os.environ.copy()
+    if env_vars:
+        env.update(env_vars)
     try:
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=step_timeout)
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=step_timeout, env=env)
         return res.stdout.strip(), res.stderr.strip(), res.returncode
     except Exception as e:
         return "", str(e), 1
@@ -377,7 +381,7 @@ start_time = time.time()
 manifest_steps = []
 overall_success = False
 
-def execute_action(step_name, action, target, val, is_sensitive):
+def execute_action(step_name, action, target, val, is_sensitive, initial_origin):
     ref = None
     if action in ['click', 'fill', 'type'] and target:
         ref, err = resolve_target_ref(target)
@@ -387,7 +391,12 @@ def execute_action(step_name, action, target, val, is_sensitive):
     if action == 'click' and ref:
         out, err, code = run_agent_cmd(["click", ref])
     elif action in ['fill', 'type'] and ref:
-        out, err, code = run_agent_cmd([action, ref, str(val)])
+        # CWE-214 Fix: Use environment variable for sensitive values to prevent process argument leakage
+        if is_sensitive:
+            env_var_name = f"JOURNEY_SENSITIVE_{uuid.uuid4().hex[:8].upper()}"
+            out, err, code = run_agent_cmd([action, ref, f"${env_var_name}"], {env_var_name: str(val)})
+        else:
+            out, err, code = run_agent_cmd([action, ref, str(val)])
     elif action == 'press' and val:
         out, err, code = run_agent_cmd(["press", str(val)])
     elif action == 'navigate' and val:
@@ -395,6 +404,10 @@ def execute_action(step_name, action, target, val, is_sensitive):
         check_url = str(val)
         if is_sensitive and not check_transport(step_name, check_url, is_sensitive):
             return False, f"Insecure destination URL '{check_url}' for sensitive step"
+        # CWE-346 Fix: Validate destination origin before navigation to prevent cross-origin redirects
+        dest_origin = urlparse(str(val)).netloc
+        if not allow_cross_origin and dest_origin and dest_origin != initial_origin:
+            return False, f"Cross-origin navigation to '{dest_origin}' blocked (CWE-346). Pass --allow-cross-origin to permit."
         out, err, code = run_agent_cmd(["open", str(val)])
     elif action == 'wait':
         if str(val).lower() == 'networkidle':
@@ -440,13 +453,17 @@ try:
         if not check_destructive(f"before_journey-{idx}", b_action, b_target, b_raw_val):
             sys.exit(1)
 
-        url_out, _, _ = run_agent_cmd(["eval", "window.location.href"])
-        cur_url = url_out.strip().strip('"\'') if url_out else start_url
+        url_out, url_err, url_code = run_agent_cmd(["eval", "window.location.href"])
+        if url_code != 0 or not url_out:
+            # CWE-319 Fix: Fail if URL lookup fails instead of falling back to start_url
+            print(f"Error: Could not retrieve current URL for transport verification (CWE-319). {url_err}")
+            sys.exit(1)
+        cur_url = url_out.strip().strip('"\'')
         if not check_transport(f"before_journey-{idx}", cur_url, b_sens):
             sys.exit(1)
 
         print(f"Executing Setup Step {idx}: [{b_action}] {b_target}".strip())
-        ok, err_msg = execute_action(f"before_journey-{idx}", b_action, b_target, b_val, b_sens)
+        ok, err_msg = execute_action(f"before_journey-{idx}", b_action, b_target, b_val, b_sens, initial_origin)
         if not ok:
             print(f"Error in setup step {idx}: {err_msg}")
             sys.exit(1)
@@ -476,8 +493,12 @@ try:
             sys.exit(1)
         is_sensitive = step.get('sensitive', False)
 
-        url_out, _, _ = run_agent_cmd(["eval", "window.location.href"])
-        cur_url = url_out.strip().strip('"\'') if url_out else start_url
+        url_out, url_err, url_code = run_agent_cmd(["eval", "window.location.href"])
+        if url_code != 0 or not url_out:
+            # CWE-319 Fix: Fail if URL lookup fails instead of falling back to start_url
+            print(f"Error: Could not retrieve current URL for transport verification (CWE-319). {url_err}")
+            sys.exit(1)
+        cur_url = url_out.strip().strip('"\'')
 
         if not check_transport(step_name, cur_url, is_sensitive):
             sys.exit(1)
@@ -489,7 +510,7 @@ try:
         log_val = "[REDACTED]" if is_sensitive else val
         print(f"Executing Step {idx:02d}: {step_name} [{action}] {target} {log_val if log_val else ''}".strip())
 
-        ok, err_msg = execute_action(step_name, action, target, val, is_sensitive)
+        ok, err_msg = execute_action(step_name, action, target, val, is_sensitive, initial_origin)
         if not ok:
             print(f"Error in Step {idx:02d} ({step_name}): {err_msg}")
             manifest_steps.append({
@@ -541,8 +562,13 @@ try:
             sys.exit(1)
 
         # Fetch current page URL for manifest metadata
-        post_url_out, _, _ = run_agent_cmd(["eval", "window.location.href"])
-        post_url = post_url_out.strip().strip('"\'') if post_url_out else cur_url
+        post_url_out, post_url_err, post_url_code = run_agent_cmd(["eval", "window.location.href"])
+        if post_url_code != 0 or not post_url_out:
+            # For manifest metadata, fall back to cur_url with warning (non-critical path)
+            print(f"Warning: Could not retrieve post-action URL for manifest metadata. Using previous URL. {post_url_err}")
+            post_url = cur_url
+        else:
+            post_url = post_url_out.strip().strip('"\'')
 
         manifest_steps.append({
             "step": idx,
