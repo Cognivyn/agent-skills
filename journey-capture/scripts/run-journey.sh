@@ -115,8 +115,10 @@ step_timeout = int(sys.argv[7])
 global_timeout = int(sys.argv[8])
 
 DESTRUCTIVE_KEYWORDS = ["delete", "remove", "cancel account", "unsubscribe", "purge", "destroy"]
+LOCAL_HOSTS = ["localhost", "127.0.0.1", "::1", "[::1]"]
 
-def parse_simple_yaml(filepath):
+def parse_journey(filepath):
+    """Parse YAML or JSON journey definitions robustly."""
     with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
 
@@ -125,12 +127,12 @@ def parse_simple_yaml(filepath):
     except json.JSONDecodeError:
         pass
 
+    # Simple line-by-line fallback parser for basic YAML
     data = {'name': '', 'start_url': '', 'steps': []}
-    lines = content.splitlines()
     current_step = None
     in_steps = False
 
-    for line in lines:
+    for line in content.splitlines():
         stripped = line.strip()
         if not stripped or stripped.startswith('#'):
             continue
@@ -162,7 +164,7 @@ def parse_simple_yaml(filepath):
 
     return data
 
-journey = parse_simple_yaml(journey_file)
+journey = parse_journey(journey_file)
 journey_name = journey.get('name', 'journey')
 start_url = journey.get('start_url', 'http://localhost')
 output_dir = custom_output_dir if custom_output_dir else f"./journey-screenshots/{journey_name}"
@@ -192,10 +194,22 @@ os.makedirs(output_dir, exist_ok=True)
 session_name = f"{journey_name}-session"
 initial_origin = urlparse(start_url).netloc
 
-def run_agent_cmd(args):
+def run_agent_cmd(args, secret_input=None):
+    """Run agent-browser command without exposing secrets in process arguments (CWE-214)."""
     cmd = ["agent-browser"] + args + ["--session", session_name]
+    env = os.environ.copy()
+    if secret_input is not None:
+        env["AGENT_BROWSER_SECRET"] = str(secret_input)
+
     try:
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=step_timeout)
+        res = subprocess.run(
+            cmd,
+            input=str(secret_input) if secret_input is not None else None,
+            capture_output=True,
+            text=True,
+            timeout=step_timeout,
+            env=env
+        )
         return res.stdout.strip(), res.returncode
     except Exception as e:
         return str(e), 1
@@ -205,6 +219,18 @@ def resolve_env_vars(val):
         var_name = val[2:-1]
         return os.getenv(var_name, val)
     return val
+
+def check_current_origin():
+    """Verify current page origin against initial origin (CWE-346)."""
+    if allow_cross_origin:
+        return True
+    url_out, code = run_agent_cmd(["eval", "window.location.href"])
+    if code == 0 and url_out:
+        cur_origin = urlparse(url_out.strip().strip('"\'')).netloc
+        if cur_origin and cur_origin != initial_origin:
+            print(f"Error: Cross-origin redirect/navigation to '{cur_origin}' detected (CWE-346). Pass --allow-cross-origin to permit.")
+            return False
+    return True
 
 manifest_steps = []
 start_time = time.time()
@@ -221,6 +247,10 @@ try:
             print(f"Error: Global journey timeout of {global_timeout}s exceeded.")
             sys.exit(1)
 
+        # Pre-action Origin Enforcement (CWE-346)
+        if not check_current_origin():
+            sys.exit(1)
+
         step_name = step.get('name', f'step-{idx}')
         slug = re.sub(r'[^a-z0-9]+', '-', step_name.lower()).strip('-')
         img_name = f"{idx:02d}-{slug}.png"
@@ -232,17 +262,25 @@ try:
         val = resolve_env_vars(raw_val)
         is_sensitive = step.get('sensitive', False)
 
+        # Insecure Transport check for current page and action targets (CWE-319)
+        url_out, _ = run_agent_cmd(["eval", "window.location.href"])
+        current_page_url = url_out.strip().strip('"\'') if url_out else start_url
+        parsed_page = urlparse(current_page_url)
+        if is_sensitive and parsed_page.scheme == "http" and parsed_page.hostname not in LOCAL_HOSTS:
+            print(f"Error: Step {idx:02d} ({step_name}) handles sensitive input over plain HTTP ({current_page_url}) (CWE-319). HTTPS required.")
+            sys.exit(1)
+
         # Destructive Action Safety Check
         step_str = f"{action} {target} {raw_val}".lower()
         if not allow_destructive and any(kw in step_str for kw in DESTRUCTIVE_KEYWORDS):
             print(f"Error: Step {idx:02d} contains potentially destructive action '{step_name}'. Pass --allow-destructive to run.")
             sys.exit(1)
 
-        # Cross-origin check for navigation
+        # Cross-origin check for explicit navigation
         if action == 'navigate' and val:
             target_origin = urlparse(str(val)).netloc
             if not allow_cross_origin and target_origin and target_origin != initial_origin:
-                print(f"Error: Cross-origin navigation to '{target_origin}' blocked. Pass --allow-cross-origin to permit.")
+                print(f"Error: Cross-origin navigation to '{target_origin}' blocked (CWE-346). Pass --allow-cross-origin to permit.")
                 sys.exit(1)
 
         log_val = "[REDACTED]" if is_sensitive and not allow_sensitive else val
@@ -252,12 +290,16 @@ try:
         ref = None
         if action in ['click', 'fill', 'type'] and target:
             snapshot_out, _ = run_agent_cmd(["snapshot", "-i"])
+            # Flexible keyword matching against tree labels
+            keywords = [k for k in target.lower().split() if len(k) > 2]
             for line in snapshot_out.splitlines():
-                if target.lower() in line.lower() and '[ref=' in line:
-                    match = re.search(r'\[ref=(e\d+)\]', line)
-                    if match:
-                        ref = "@" + match.group(1)
-                        break
+                if '[ref=' in line:
+                    line_lower = line.lower()
+                    if target.lower() in line_lower or any(kw in line_lower for kw in keywords):
+                        match = re.search(r'\[ref=(e\d+)\]', line)
+                        if match:
+                            ref = "@" + match.group(1)
+                            break
 
             if not ref:
                 print(f"Error: Could not resolve element ref for target '{target}' in Step {idx:02d}.")
@@ -272,15 +314,22 @@ try:
                 })
                 sys.exit(1)
 
-        # Perform Action
+        # Perform Action with Secret Protection (CWE-214)
         if action == 'click' and ref:
             stdout, code = run_agent_cmd(["click", ref])
         elif action in ['fill', 'type'] and ref:
-            stdout, code = run_agent_cmd([action, ref, str(val)])
+            if is_sensitive:
+                stdout, code = run_agent_cmd([action, ref], secret_input=val)
+            else:
+                stdout, code = run_agent_cmd([action, ref, str(val)])
         elif action == 'press' and val:
             stdout, code = run_agent_cmd(["press", str(val)])
         elif action == 'navigate' and val:
             stdout, code = run_agent_cmd(["open", str(val)])
+
+        # Post-action Origin Check (CWE-346)
+        if not check_current_origin():
+            sys.exit(1)
 
         # Settle wait
         wait_text = step.get('wait_for_text')
@@ -290,11 +339,22 @@ try:
             run_agent_cmd(["wait", "--load", "networkidle"])
         time.sleep(0.25)
 
+        # Sensitive Screenshot Masking (CWE-200) without mutating element values
+        mask_js = "document.querySelectorAll('input, select, textarea, [sensitive]').forEach(el => { if (el.type === 'password' || el.hasAttribute('sensitive') || el.name?.includes('password') || el.id?.includes('password')) { el.style.filter = 'blur(10px) brightness(0.5)'; } });"
+        unmask_js = "document.querySelectorAll('input, select, textarea, [sensitive]').forEach(el => { el.style.filter = ''; });"
+
+        if is_sensitive and not allow_sensitive:
+            run_agent_cmd(["eval", mask_js])
+
         # Screenshot
         cmd_screen = ["screenshot", img_path]
         if step.get('full_page', False):
             cmd_screen.append("--full-page")
         run_agent_cmd(cmd_screen)
+
+        # Restore visual styles after screenshot if masked
+        if is_sensitive and not allow_sensitive:
+            run_agent_cmd(["eval", unmask_js])
 
         manifest_steps.append({
             "step": idx,

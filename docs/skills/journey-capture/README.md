@@ -57,12 +57,14 @@ journey-screenshots/signup/
 └── journey.json
 ```
 
-## Safety Behavior & Boundaries
+## Safety Behavior & Security Boundaries
 
 - **Destructive Action Block**: Automatically blocks actions matching `delete`, `remove`, `cancel account`, `unsubscribe`, `purge`, `destroy` unless `--allow-destructive` is supplied.
-- **Credential Hygiene**: Credentials are supplied exclusively through environment variables (`${TEST_USER_EMAIL}`). Secrets are never logged or stored in `journey.json`.
-- **Sensitive Field Redaction**: Steps marked `sensitive: true` have values redacted in logs and inputs masked in screenshots unless `--allow-sensitive-capture` is enabled.
-- **Session Cleanup**: Active browser sessions are automatically closed on exit (`trap`) even when errors occur.
+- **Process Secret Protection**: Sensitive values are passed via environment variables during CLI execution to prevent exposure in process lists (`ps` / `CWE-214`).
+- **Transport Security**: Requires HTTPS transport for non-local hosts when processing sensitive inputs (`CWE-319`).
+- **Sensitive Field Masking**: Password inputs and sensitive fields are blurred/masked in screenshots (`CWE-200`) unless `--allow-sensitive-capture` is enabled. Values are redacted (`[REDACTED]`) from logs and `journey.json`.
+- **Origin Enforcement**: Enforces same-origin boundaries after redirects and actions (`CWE-346`) unless `--allow-cross-origin` is passed.
+- **Session Cleanup**: Active browser sessions are automatically closed on exit (`finally` / `trap`) even when errors occur.
 
 ## Schema & Cheatsheet
 
