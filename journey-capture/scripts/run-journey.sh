@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # run-journey.sh
-# Runner script for journey-capture flows using agent-browser CLI.
+# Modular, robust runner script for journey-capture flows using agent-browser CLI.
 
 JOURNEY_FILE=""
 OUTPUT_DIR=""
@@ -94,7 +94,7 @@ fi
 # Run pre-validation
 "$(dirname "$0")/validate-journey.sh" "$JOURNEY_FILE"
 
-# Execute journey using Python helper (stdlib only)
+# Execute journey using modular Python helper (stdlib only)
 python3 - "$JOURNEY_FILE" "$OUTPUT_DIR" "$DRY_RUN" "$ALLOW_DESTRUCTIVE" "$ALLOW_SENSITIVE" "$ALLOW_CROSS_ORIGIN" "$STEP_TIMEOUT" "$GLOBAL_TIMEOUT" <<'PYEOF'
 import sys
 import os
@@ -105,6 +105,7 @@ import time
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
+# CLI arguments
 journey_file = sys.argv[1]
 custom_output_dir = sys.argv[2]
 dry_run = sys.argv[3].lower() == 'true'
@@ -116,9 +117,12 @@ global_timeout = int(sys.argv[8])
 
 DESTRUCTIVE_KEYWORDS = ["delete", "remove", "cancel account", "unsubscribe", "purge", "destroy"]
 LOCAL_HOSTS = ["localhost", "127.0.0.1", "::1", "[::1]"]
+GENERIC_ROLES = {"button", "input", "select", "textarea", "link", "field", "form", "option"}
 
+# ==========================================
+# 1. YAML / JSON Parser Module
+# ==========================================
 def parse_journey(filepath):
-    """Parse YAML or JSON journey definitions robustly."""
     with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
 
@@ -127,63 +131,230 @@ def parse_journey(filepath):
     except json.JSONDecodeError:
         pass
 
-    # Simple line-by-line fallback parser for basic YAML
-    data = {'name': '', 'start_url': '', 'steps': []}
-    current_step = None
-    in_steps = False
+    # Indentation-aware lightweight YAML parser for journey schemas
+    data = {'name': '', 'start_url': '', 'viewport': {}, 'before_journey': [], 'steps': []}
+    lines = content.splitlines()
 
-    for line in content.splitlines():
+    current_section = None
+    current_item = None
+
+    for line in lines:
         stripped = line.strip()
         if not stripped or stripped.startswith('#'):
             continue
 
-        if line.startswith('name:'):
-            data['name'] = line.split(':', 1)[1].strip().strip('"\'')
-        elif line.startswith('start_url:'):
-            data['start_url'] = line.split(':', 1)[1].strip().strip('"\'')
-        elif line.startswith('steps:'):
-            in_steps = True
-        elif in_steps:
+        indent = len(line) - len(line.lstrip())
+
+        if indent == 0:
+            if current_item and current_section:
+                data[current_section].append(current_item)
+                current_item = None
+
+            if line.startswith('name:'):
+                data['name'] = line.split(':', 1)[1].strip().strip('"\'')
+                current_section = None
+            elif line.startswith('start_url:'):
+                data['start_url'] = line.split(':', 1)[1].strip().strip('"\'')
+                current_section = None
+            elif line.startswith('viewport:'):
+                current_section = 'viewport'
+            elif line.startswith('before_journey:'):
+                current_section = 'before_journey'
+            elif line.startswith('steps:'):
+                current_section = 'steps'
+            continue
+
+        if current_section == 'viewport' and ':' in stripped:
+            k, v = stripped.split(':', 1)
+            data['viewport'][k.strip()] = int(v.strip())
+        elif current_section in ('before_journey', 'steps'):
             if stripped.startswith('- '):
-                if current_step:
-                    data['steps'].append(current_step)
-                current_step = {}
+                if current_item:
+                    data[current_section].append(current_item)
+                current_item = {}
                 item = stripped[2:].strip()
                 if ':' in item:
                     k, v = item.split(':', 1)
-                    current_step[k.strip()] = v.strip().strip('"\'')
-            elif current_step and ':' in stripped:
+                    current_item[k.strip()] = parse_scalar(v.strip())
+            elif current_item and ':' in stripped:
                 k, v = stripped.split(':', 1)
-                val = v.strip().strip('"\'')
-                if val.lower() == 'true': val = True
-                elif val.lower() == 'false': val = False
-                current_step[k.strip()] = val
+                current_item[k.strip()] = parse_scalar(v.strip())
 
-    if current_step:
-        data['steps'].append(current_step)
+    if current_item and current_section in ('before_journey', 'steps'):
+        data[current_section].append(current_item)
 
     return data
 
+def parse_scalar(val_str):
+    val_str = val_str.strip().strip('"\'')
+    if val_str.lower() == 'true': return True
+    if val_str.lower() == 'false': return False
+    return val_str
+
+# ==========================================
+# 2. Variable Resolution & Safety Module
+# ==========================================
+def resolve_env_vars(val, step_name):
+    if isinstance(val, str) and val.startswith("${") and val.endswith("}"):
+        var_name = val[2:-1]
+        resolved = os.getenv(var_name)
+        if resolved is None:
+            print(f"Error: Environment variable '{var_name}' required for step '{step_name}' is not set.")
+            sys.exit(1)
+        return resolved
+    return val
+
+def check_destructive(step_name, action, target, raw_val):
+    step_str = f"{action} {target} {raw_val}".lower()
+    if not allow_destructive and any(kw in step_str for kw in DESTRUCTIVE_KEYWORDS):
+        print(f"Error: Step '{step_name}' contains potentially destructive action keyword. Pass --allow-destructive to run.")
+        sys.exit(1)
+
+def check_transport(step_name, current_url, is_sensitive):
+    parsed = urlparse(current_url)
+    if is_sensitive and parsed.scheme == "http" and parsed.hostname not in LOCAL_HOSTS:
+        print(f"Error: Step '{step_name}' handles sensitive input over unencrypted HTTP ({current_url}) (CWE-319). HTTPS required.")
+        sys.exit(1)
+
+# ==========================================
+# 3. Agent-Browser CLI Command Module
+# ==========================================
+session_name = ""
+
+def run_agent_cmd(args):
+    cmd = ["agent-browser"] + args + ["--session", session_name]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=step_timeout)
+        return res.stdout.strip(), res.stderr.strip(), res.returncode
+    except Exception as e:
+        return "", str(e), 1
+
+def check_origin(initial_origin):
+    if allow_cross_origin:
+        return True
+    url_out, stderr, code = run_agent_cmd(["eval", "window.location.href"])
+    if code != 0 or not url_out:
+        print(f"Error: Could not verify current page origin (CWE-346 closed-fail). {stderr}")
+        return False
+    cur_origin = urlparse(url_out.strip().strip('"\'')).netloc
+    if not cur_origin or cur_origin != initial_origin:
+        print(f"Error: Cross-origin redirect/navigation to '{cur_origin}' detected (CWE-346). Pass --allow-cross-origin to permit.")
+        return False
+    return True
+
+# ==========================================
+# 4. Element Target Ref Resolution Module
+# ==========================================
+def resolve_target_ref(target):
+    snapshot_out, stderr, code = run_agent_cmd(["snapshot", "-i"])
+    if code != 0:
+        return None, f"Snapshot failed: {stderr}"
+
+    target_clean = target.lower().strip()
+    words = [w for w in re.findall(r'\w+', target_clean) if len(w) > 1]
+    meaningful_words = [w for w in words if w not in GENERIC_ROLES]
+
+    best_ref = None
+    best_score = -1
+
+    for line in snapshot_out.splitlines():
+        if '[ref=' not in line:
+            continue
+        line_clean = line.lower()
+        match = re.search(r'\[ref=(e\d+)\]', line)
+        if not match:
+            continue
+        ref = "@" + match.group(1)
+
+        # Require all meaningful non-generic words to match
+        if meaningful_words and not all(w in line_clean for w in meaningful_words):
+            continue
+
+        score = sum(1 for w in words if w in line_clean)
+        if target_clean in line_clean:
+            score += 100
+
+        if score > best_score:
+            best_score = score
+            best_ref = ref
+
+    if not best_ref and not meaningful_words:
+        # Strict fall-back if target consists entirely of words
+        for line in snapshot_out.splitlines():
+            if target_clean in line.lower() and '[ref=' in line:
+                match = re.search(r'\[ref=(e\d+)\]', line)
+                if match:
+                    return "@" + match.group(1), ""
+
+    if not best_ref:
+        return None, f"Target '{target}' did not match any snapshot element with confidence."
+
+    return best_ref, ""
+
+# ==========================================
+# 5. Sensitive Style Masking Module
+# ==========================================
+def mask_sensitive_elements():
+    mask_js = """
+    (function() {
+        const saved = [];
+        document.querySelectorAll('input, select, textarea, [sensitive]').forEach(el => {
+            if (el.type === 'password' || el.hasAttribute('sensitive') || (el.name && el.name.includes('password')) || (el.id && el.id.includes('password'))) {
+                saved.push({ element: el, prevFilter: el.style.filter || '' });
+                el.style.filter = 'blur(10px) brightness(0.5)';
+            }
+        });
+        window.__journey_masked_styles = saved;
+    })();
+    """
+    run_agent_cmd(["eval", mask_js])
+
+def unmask_sensitive_elements():
+    unmask_js = """
+    (function() {
+        if (window.__journey_masked_styles) {
+            window.__journey_masked_styles.forEach(item => {
+                if (item.element) item.element.style.filter = item.prevFilter;
+            });
+            delete window.__journey_masked_styles;
+        }
+    })();
+    """
+    run_agent_cmd(["eval", unmask_js])
+
+# ==========================================
+# 6. Main Journey Execution Controller
+# ==========================================
 journey = parse_journey(journey_file)
 journey_name = journey.get('name', 'journey')
 start_url = journey.get('start_url', 'http://localhost')
+viewport = journey.get('viewport', {})
+before_journey = journey.get('before_journey', [])
+steps = journey.get('steps', [])
+
 output_dir = custom_output_dir if custom_output_dir else f"./journey-screenshots/{journey_name}"
 
 print(f"=== Journey Execution Configuration ===")
 print(f"Journey Name      : {journey_name}")
 print(f"Start URL         : {start_url}")
 print(f"Output Directory  : {output_dir}")
+print(f"Viewport          : {viewport.get('width', 1280)}x{viewport.get('height', 800)}")
 print(f"Dry Run           : {dry_run}")
 print(f"Allow Destructive : {allow_destructive}")
 print(f"Allow Sensitive   : {allow_sensitive}")
 print(f"Allow Cross-Origin: {allow_cross_origin}")
-print(f"Step Count        : {len(journey.get('steps', []))}")
+print(f"Setup Steps       : {len(before_journey)}")
+print(f"Main Steps        : {len(steps)}")
 print(f"=======================================")
 
 if dry_run:
     print(f"[DRY-RUN] Would create directory: {output_dir}")
     print(f"[DRY-RUN] Would open session: agent-browser open \"{start_url}\" --session \"{journey_name}-session\"")
-    for idx, step in enumerate(journey.get('steps', []), 1):
+    if viewport:
+        print(f"[DRY-RUN] Would set viewport: {viewport.get('width', 1280)}x{viewport.get('height', 800)}")
+    for idx, b_step in enumerate(before_journey, 1):
+        print(f"[DRY-RUN] Setup Step {idx}: {b_step.get('action')} {b_step.get('target', '')}")
+    for idx, step in enumerate(steps, 1):
         slug = re.sub(r'[^a-z0-9]+', '-', step.get('name', f'step-{idx}').lower()).strip('-')
         img_name = f"{idx:02d}-{slug}.png"
         print(f"[DRY-RUN] Step {idx:02d}: {step.get('name')} -> {img_name}")
@@ -193,62 +364,82 @@ if dry_run:
 os.makedirs(output_dir, exist_ok=True)
 session_name = f"{journey_name}-session"
 initial_origin = urlparse(start_url).netloc
-
-def run_agent_cmd(args, secret_input=None):
-    """Run agent-browser command without exposing secrets in process arguments (CWE-214)."""
-    cmd = ["agent-browser"] + args + ["--session", session_name]
-    env = os.environ.copy()
-    if secret_input is not None:
-        env["AGENT_BROWSER_SECRET"] = str(secret_input)
-
-    try:
-        res = subprocess.run(
-            cmd,
-            input=str(secret_input) if secret_input is not None else None,
-            capture_output=True,
-            text=True,
-            timeout=step_timeout,
-            env=env
-        )
-        return res.stdout.strip(), res.returncode
-    except Exception as e:
-        return str(e), 1
-
-def resolve_env_vars(val):
-    if isinstance(val, str) and val.startswith("${") and val.endswith("}"):
-        var_name = val[2:-1]
-        return os.getenv(var_name, val)
-    return val
-
-def check_current_origin():
-    """Verify current page origin against initial origin (CWE-346)."""
-    if allow_cross_origin:
-        return True
-    url_out, code = run_agent_cmd(["eval", "window.location.href"])
-    if code == 0 and url_out:
-        cur_origin = urlparse(url_out.strip().strip('"\'')).netloc
-        if cur_origin and cur_origin != initial_origin:
-            print(f"Error: Cross-origin redirect/navigation to '{cur_origin}' detected (CWE-346). Pass --allow-cross-origin to permit.")
-            return False
-    return True
-
-manifest_steps = []
 start_time = time.time()
+manifest_steps = []
+
+def execute_action(step_name, action, target, val, is_sensitive):
+    ref = None
+    if action in ['click', 'fill', 'type'] and target:
+        ref, err = resolve_target_ref(target)
+        if not ref:
+            return False, f"Target ref resolution failed: {err}"
+
+    if action == 'click' and ref:
+        out, err, code = run_agent_cmd(["click", ref])
+    elif action in ['fill', 'type'] and ref:
+        out, err, code = run_agent_cmd([action, ref, str(val)])
+    elif action == 'press' and val:
+        out, err, code = run_agent_cmd(["press", str(val)])
+    elif action == 'navigate' and val:
+        out, err, code = run_agent_cmd(["open", str(val)])
+    elif action == 'wait':
+        if str(val).lower() == 'networkidle':
+            out, err, code = run_agent_cmd(["wait", "--load", "networkidle"])
+        else:
+            out, err, code = run_agent_cmd(["wait", "--text", str(val)])
+    else:
+        out, err, code = "", "", 0
+
+    if code != 0:
+        return False, f"Action '{action}' failed: {err if err else out}"
+    return True, ""
 
 try:
-    print(f"Opening initial browser session ({session_name})...")
-    stdout, code = run_agent_cmd(["open", start_url])
+    print(f"Opening browser session ({session_name})...")
+    out, err, code = run_agent_cmd(["open", start_url])
     if code != 0:
-        print(f"Error initializing session: {stdout}")
+        print(f"Error initializing session: {err if err else out}")
         sys.exit(1)
 
-    for idx, step in enumerate(journey.get('steps', []), 1):
+    if viewport:
+        vw = viewport.get('width', 1280)
+        vh = viewport.get('height', 800)
+        run_agent_cmd(["viewport", str(vw), str(vh)])
+
+    # Execute Setup Steps (before_journey)
+    for idx, b_step in enumerate(before_journey, 1):
+        if time.time() - start_time > global_timeout:
+            print(f"Error: Global journey timeout of {global_timeout}s exceeded during setup.")
+            sys.exit(1)
+
+        b_action = b_step.get('action', 'wait')
+        b_target = b_step.get('target', '')
+        b_raw_val = b_step.get('value', '')
+        b_val = resolve_env_vars(b_raw_val, f"before_journey-{idx}")
+        b_sens = b_step.get('sensitive', False)
+
+        check_destructive(f"before_journey-{idx}", b_action, b_target, b_raw_val)
+
+        url_out, _, _ = run_agent_cmd(["eval", "window.location.href"])
+        cur_url = url_out.strip().strip('"\'') if url_out else start_url
+        check_transport(f"before_journey-{idx}", cur_url, b_sens)
+
+        print(f"Executing Setup Step {idx}: [{b_action}] {b_target}".strip())
+        ok, err_msg = execute_action(f"before_journey-{idx}", b_action, b_target, b_val, b_sens)
+        if not ok:
+            print(f"Error in setup step {idx}: {err_msg}")
+            sys.exit(1)
+
+        if not check_origin(initial_origin):
+            sys.exit(1)
+
+    # Execute Main Journey Steps
+    for idx, step in enumerate(steps, 1):
         if time.time() - start_time > global_timeout:
             print(f"Error: Global journey timeout of {global_timeout}s exceeded.")
             sys.exit(1)
 
-        # Pre-action Origin Enforcement (CWE-346)
-        if not check_current_origin():
+        if not check_origin(initial_origin):
             sys.exit(1)
 
         step_name = step.get('name', f'step-{idx}')
@@ -259,102 +450,62 @@ try:
         action = step.get('action', 'wait')
         target = step.get('target', '')
         raw_val = step.get('value', '')
-        val = resolve_env_vars(raw_val)
+        val = resolve_env_vars(raw_val, step_name)
         is_sensitive = step.get('sensitive', False)
 
-        # Insecure Transport check for current page and action targets (CWE-319)
-        url_out, _ = run_agent_cmd(["eval", "window.location.href"])
-        current_page_url = url_out.strip().strip('"\'') if url_out else start_url
-        parsed_page = urlparse(current_page_url)
-        if is_sensitive and parsed_page.scheme == "http" and parsed_page.hostname not in LOCAL_HOSTS:
-            print(f"Error: Step {idx:02d} ({step_name}) handles sensitive input over plain HTTP ({current_page_url}) (CWE-319). HTTPS required.")
-            sys.exit(1)
-
-        # Destructive Action Safety Check
-        step_str = f"{action} {target} {raw_val}".lower()
-        if not allow_destructive and any(kw in step_str for kw in DESTRUCTIVE_KEYWORDS):
-            print(f"Error: Step {idx:02d} contains potentially destructive action '{step_name}'. Pass --allow-destructive to run.")
-            sys.exit(1)
-
-        # Cross-origin check for explicit navigation
-        if action == 'navigate' and val:
-            target_origin = urlparse(str(val)).netloc
-            if not allow_cross_origin and target_origin and target_origin != initial_origin:
-                print(f"Error: Cross-origin navigation to '{target_origin}' blocked (CWE-346). Pass --allow-cross-origin to permit.")
-                sys.exit(1)
+        url_out, _, _ = run_agent_cmd(["eval", "window.location.href"])
+        cur_url = url_out.strip().strip('"\'') if url_out else start_url
+        check_transport(step_name, cur_url, is_sensitive)
+        check_destructive(step_name, action, target, raw_val)
 
         log_val = "[REDACTED]" if is_sensitive and not allow_sensitive else val
         print(f"Executing Step {idx:02d}: {step_name} [{action}] {target} {log_val if log_val else ''}".strip())
 
-        # Snapshot to resolve refs if interaction action
-        ref = None
-        if action in ['click', 'fill', 'type'] and target:
-            snapshot_out, _ = run_agent_cmd(["snapshot", "-i"])
-            # Flexible keyword matching against tree labels
-            keywords = [k for k in target.lower().split() if len(k) > 2]
-            for line in snapshot_out.splitlines():
-                if '[ref=' in line:
-                    line_lower = line.lower()
-                    if target.lower() in line_lower or any(kw in line_lower for kw in keywords):
-                        match = re.search(r'\[ref=(e\d+)\]', line)
-                        if match:
-                            ref = "@" + match.group(1)
-                            break
-
-            if not ref:
-                print(f"Error: Could not resolve element ref for target '{target}' in Step {idx:02d}.")
-                manifest_steps.append({
-                    "step": idx,
-                    "name": step_name,
-                    "filename": img_name,
-                    "action": action,
-                    "sensitive": is_sensitive,
-                    "status": "failed",
-                    "error": f"Element target '{target}' not found"
-                })
-                sys.exit(1)
-
-        # Perform Action with Secret Protection (CWE-214)
-        if action == 'click' and ref:
-            stdout, code = run_agent_cmd(["click", ref])
-        elif action in ['fill', 'type'] and ref:
-            if is_sensitive:
-                stdout, code = run_agent_cmd([action, ref], secret_input=val)
-            else:
-                stdout, code = run_agent_cmd([action, ref, str(val)])
-        elif action == 'press' and val:
-            stdout, code = run_agent_cmd(["press", str(val)])
-        elif action == 'navigate' and val:
-            stdout, code = run_agent_cmd(["open", str(val)])
-
-        # Post-action Origin Check (CWE-346)
-        if not check_current_origin():
+        ok, err_msg = execute_action(step_name, action, target, val, is_sensitive)
+        if not ok:
+            print(f"Error in Step {idx:02d} ({step_name}): {err_msg}")
+            manifest_steps.append({
+                "step": idx,
+                "name": step_name,
+                "filename": img_name,
+                "action": action,
+                "sensitive": is_sensitive,
+                "status": "failed",
+                "error": err_msg
+            })
             sys.exit(1)
 
-        # Settle wait
+        if not check_origin(initial_origin):
+            sys.exit(1)
+
+        # Settle Wait Handling
         wait_text = step.get('wait_for_text')
         if wait_text:
-            run_agent_cmd(["wait", "--text", str(wait_text)])
+            w_out, w_err, w_code = run_agent_cmd(["wait", "--text", str(wait_text)])
         else:
-            run_agent_cmd(["wait", "--load", "networkidle"])
+            w_out, w_err, w_code = run_agent_cmd(["wait", "--load", "networkidle"])
+
+        if w_code != 0:
+            print(f"Error during wait settling in Step {idx:02d}: {w_err if w_err else w_out}")
+            sys.exit(1)
+
         time.sleep(0.25)
 
-        # Sensitive Screenshot Masking (CWE-200) without mutating element values
-        mask_js = "document.querySelectorAll('input, select, textarea, [sensitive]').forEach(el => { if (el.type === 'password' || el.hasAttribute('sensitive') || el.name?.includes('password') || el.id?.includes('password')) { el.style.filter = 'blur(10px) brightness(0.5)'; } });"
-        unmask_js = "document.querySelectorAll('input, select, textarea, [sensitive]').forEach(el => { el.style.filter = ''; });"
-
+        # Screenshot Capture with Masking Style Preservation
         if is_sensitive and not allow_sensitive:
-            run_agent_cmd(["eval", mask_js])
+            mask_sensitive_elements()
 
-        # Screenshot
         cmd_screen = ["screenshot", img_path]
         if step.get('full_page', False):
             cmd_screen.append("--full-page")
-        run_agent_cmd(cmd_screen)
+        s_out, s_err, s_code = run_agent_cmd(cmd_screen)
 
-        # Restore visual styles after screenshot if masked
         if is_sensitive and not allow_sensitive:
-            run_agent_cmd(["eval", unmask_js])
+            unmask_sensitive_elements()
+
+        if s_code != 0:
+            print(f"Error capturing screenshot in Step {idx:02d}: {s_err if s_err else s_out}")
+            sys.exit(1)
 
         manifest_steps.append({
             "step": idx,
@@ -370,17 +521,33 @@ finally:
     print(f"Cleaning up browser session ({session_name})...")
     subprocess.run(["agent-browser", "--session", session_name, "close"], capture_output=True, text=True)
 
+# Write Manifest
 manifest = {
     "journey_name": journey_name,
     "start_url": start_url,
     "timestamp": datetime.now(timezone.utc).isoformat(),
     "output_directory": output_dir,
     "steps": manifest_steps,
-    "status": "completed"
+    "status": "completed" if len(manifest_steps) == len(steps) else "failed"
 }
 
-with open(os.path.join(output_dir, "journey.json"), "w", encoding="utf-8") as f:
+manifest_path = os.path.join(output_dir, "journey.json")
+with open(manifest_path, "w", encoding="utf-8") as f:
     json.dump(manifest, f, indent=2)
 
-print(f"Journey execution finished. Screenshots and manifest saved to {output_dir}/")
+# ==========================================
+# 7. Terminal Summary Report Output
+# ==========================================
+print("\n## journey-capture\n")
+print(f"**Journey**: {journey_name}")
+print(f"**Start URL**: {start_url}")
+print(f"**Output Directory**: {output_dir}")
+print(f"**Screenshots Captured**: {len(manifest_steps)} step(s)")
+print(f"**Manifest**: {manifest_path}\n")
+print("| Step | Name | Filename | Status |")
+print("| --- | --- | --- | --- |")
+for s in manifest_steps:
+    status_str = "Success" if s["status"] == "completed" else "Failed"
+    print(f"| {s['step']:02d} | {s['name']} | {s['filename']} | {status_str} |")
+print("\nJourney execution complete.")
 PYEOF
