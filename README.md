@@ -13,7 +13,6 @@ Open-source, task-focused skills for agent clients such as [Kilo](https://kilo.a
 | [`journey-capture`](./journey-capture/) | Automate step-by-step screenshot capture across web app user journeys (signup, checkout, onboarding) using `agent-browser`. Produces numbered screenshots plus a `journey.json` manifest | `agent-browser` CLI installed | [Overview](./docs/skills/journey-capture/README.md) · [`SKILL.md`](./journey-capture/SKILL.md) |
 | [`win-disk-diagnostics`](./win-disk-diagnostics/) | Inspect, diagnose, and audit Windows storage volumes, locked NT kernel space, developer bloat, and OS waste | PowerShell 5.1+ (Windows) | [Overview](./docs/skills/win-disk-diagnostics/README.md) · [`SKILL.md`](./win-disk-diagnostics/SKILL.md) |
 
-
 The [skill-specific documentation](./docs/skills/) contains concise usage and safety notes. The corresponding `SKILL.md` is the authoritative workflow an agent follows.
 
 ## Repository documentation
@@ -26,6 +25,17 @@ The repository-wide guidance is organized under [`docs/`](./docs/):
 - [Validation](./docs/validation.md) lists local checks and pull-request quality gates.
 
 Skill packages intentionally remain top-level directories because the CLI and supported agent clients discover them by locating `SKILL.md`. Shared policy belongs in `docs/`; skill-specific detail belongs in each package's `references/`, `scripts/`, or `templates/` directory.
+
+## Slash commands in OpenCode
+
+Skills and slash commands are separate registries, so a `SKILL.md` alone never adds a slash command. This repository ships thin wrappers under [`.opencode/commands/`](./.opencode/commands/) that load a skill and forward `$ARGUMENTS`:
+
+| Command | Loads | Requires |
+| --- | --- | --- |
+| `/git-clean` | `git-clean` | Git with an `origin` remote |
+| `/gh-issue-create <title>` | `gh-issue-create` | `gh` installed and authenticated |
+
+The wrappers add no workflow steps; each `SKILL.md` stays authoritative. Copy the wrapper pattern when adding a command for a new skill, and install the skill itself with `./agent-skills add <name>` so the client can load it.
 
 ## Quick start
 

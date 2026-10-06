@@ -21,6 +21,29 @@ repository (where the shell is already located), so never hardcode a repo path.
   plan/README in the current working directory.
 - Turning a markdown checklist or plan (e.g. *-plan.md) into a tracked issue.
 
+## Slash command
+
+OpenCode exposes this skill as `/gh-issue-create` through
+`.opencode/commands/gh-issue-create.md` in this repository. That file is a
+thin wrapper: it asks the agent to load this skill and forwards the typed text
+as `$ARGUMENTS`. It adds no steps of its own, so the workflow and safety rules
+below are authoritative and run unchanged.
+
+Argument handling:
+
+- The argument is the issue title, plus an optional relative path to a plan or
+  checklist to use as the body: `/gh-issue-create "Add rate limiting" from
+  docs/plan.md`.
+- With an empty argument, ask for a title rather than guessing from the branch
+  name.
+- Arguments are prompt text only. They are never a body, and they never relax
+  step 0: still detect the shell, still write the body to a file with
+  `--body-file`, and still verify with `gh issue list`.
+- Path arguments resolve against the current working directory. Never accept or
+  emit a hardcoded absolute repository path.
+- A slash invocation is not approval for other `gh` mutations. Creating labels,
+  closing issues, or assigning reviewers still needs an explicit ask.
+
 ## Workflow
 
 ### 0. Detect the running environment first
