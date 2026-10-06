@@ -11,6 +11,8 @@ Open-source, task-focused skills for agent clients such as [Kilo](https://kilo.a
 | [`gh-issue-create`](./gh-issue-create/) | Create a GitHub issue from the current repository, including a plan or Markdown checklist | GitHub CLI (`gh`) installed and authenticated | [Overview](./docs/skills/gh-issue-create/README.md) · [`SKILL.md`](./gh-issue-create/SKILL.md) |
 | [`git-clean`](./git-clean/) | Safely synchronize the local `main` branch with `origin` without losing local work | Git and an `origin` remote | [Overview](./docs/skills/git-clean/README.md) · [`SKILL.md`](./git-clean/SKILL.md) |
 | [`journey-capture`](./journey-capture/) | Automate step-by-step screenshot capture across web app user journeys (signup, checkout, onboarding) using `agent-browser`. Produces numbered screenshots plus a `journey.json` manifest | `agent-browser` CLI installed | [Overview](./docs/skills/journey-capture/README.md) · [`SKILL.md`](./journey-capture/SKILL.md) |
+| [`win-disk-diagnostics`](./win-disk-diagnostics/) | Inspect, diagnose, and audit Windows storage volumes, locked NT kernel space, developer bloat, and OS waste | PowerShell 5.1+ (Windows) | [Overview](./docs/skills/win-disk-diagnostics/README.md) · [`SKILL.md`](./win-disk-diagnostics/SKILL.md) |
+
 
 The [skill-specific documentation](./docs/skills/) contains concise usage and safety notes. The corresponding `SKILL.md` is the authoritative workflow an agent follows.
 
