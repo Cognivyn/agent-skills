@@ -1,6 +1,28 @@
 # src/Exporters.ps1
 # Single Responsibility: Serialization and persistence of diagnostic audit reports (CSV/JSON).
 
+function ConvertTo-DiagnosticJson {
+    <#
+    .SYNOPSIS
+        Serializes diagnostic data to a JSON string for stdout emission.
+
+    .DESCRIPTION
+        Emitting JSON on stdout is what lets a sub-agent consume results without
+        parsing the human-facing tables. Depth is raised above the default so
+        nested report envelopes survive the round trip.
+
+        Paths are expected to be pre-scrubbed by the collectors.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [array]$Data,
+        [int]$Depth = 6
+    )
+
+    return ($Data | ConvertTo-Json -Depth $Depth -Compress:$false)
+}
+
 function Export-DiagnosticReport {
     <#
     .SYNOPSIS
@@ -29,10 +51,8 @@ function Export-DiagnosticReport {
 
         if ($Format -eq 'CSV') {
             $Data | Export-Csv -Path $DestinationPath -NoTypeInformation -Encoding UTF8
-            Write-Host "[EXPORT] Saved CSV report to: $DestinationPath" -ForegroundColor Green
         } elseif ($Format -eq 'JSON') {
-            $Data | ConvertTo-Json -Depth 4 | Set-Content -Path $DestinationPath -Encoding UTF8
-            Write-Host "[EXPORT] Saved JSON report to: $DestinationPath" -ForegroundColor Green
+            $Data | ConvertTo-Json -Depth 6 | Set-Content -Path $DestinationPath -Encoding UTF8
         }
     } catch {
         Write-Warning "Failed to export diagnostic data to '$DestinationPath': $_"
