@@ -3,22 +3,27 @@
     Safe, interactive node_modules scanner and storage pruner.
 
 .DESCRIPTION
-    Scans a target root path (defaulting to Z:\WSL\Consultancy\Git_Repos) for top-level
-    node_modules directories, calculates disk space consumed, records their age, and
-    prompts the user for explicit permission to delete candidate folders that have
-    not been modified in more than 2 days.
+    Scans a target root path for node_modules directories, calculates disk space
+    consumed, records their age, and deletes candidate folders only after the
+    user explicitly agrees. Folders modified within the staleness threshold are
+    always preserved.
 
 .SECURITY GUARANTEES
-    - EXPLICIT CONFIRMATION: Never deletes automatically without human permission unless -Force is passed.
-    - RECENT FOLDER SHIELD: Protects folders modified within 2 days (configurable via -DaysOlderThan).
-    - EXCLUSION BOUNDARIES: Skips 04-Archives, Archives, .git, .pnpm-store, and nested node_modules.
-    - DRY-RUN DEFAULT: Supports -DryRun for audit-only execution with zero file modifications.
+    - EXPLICIT CONFIRMATION: Never deletes without a ShouldProcess decision, so
+      -WhatIf and -Confirm are honoured. -Force additionally skips the prompt.
+    - RECENT FOLDER SHIELD: Protects folders modified within -DaysOlderThan days.
+    - EXCLUSION BOUNDARIES: Skips archive folders, .git, and pnpm stores, and
+      does not descend into a node_modules tree it has already recorded.
+    - DRY-RUN DEFAULT: Supports -DryRun for audit-only execution with zero
+      file modifications.
+    - PRIVACY: Reported paths are scrubbed of the account name.
 
 .PARAMETER Path
-    Root directory to scan (Default: "Z:\WSL\Consultancy\Git_Repos").
+    Root directory to scan. Defaults to the current working directory. Pass an
+    explicit path; no machine-specific path is baked into this script.
 
 .PARAMETER DaysOlderThan
-    Age threshold in days. Folders older than this are eligible for pruning (Default: 2.0).
+    Age threshold in days. Folders older than this are eligible for pruning (Default: 14.0).
 
 .PARAMETER DryRun
     Audit-only switch. Displays inventory and storage analysis without prompting for deletion.
@@ -30,25 +35,44 @@
     Path to destination export file when -ExportFormat is specified.
 
 .PARAMETER Force
-    Bypasses interactive prompt and deletes all eligible folders (Automation only).
+    Skips the interactive prompt and proceeds with all eligible folders. Still
+    subject to -WhatIf.
+
+.PARAMETER WhatIf
+    Shows what would be deleted without deleting anything. Handled by
+    SupportsShouldProcess; deletion of every folder is wrapped in ShouldProcess.
 
 .EXAMPLE
     .\Clean-NodeModules.ps1 -DryRun
-    Scans and reports all node_modules and space consumed without deleting anything.
+    Scans the current directory and reports all node_modules and space consumed without deleting anything.
 
 .EXAMPLE
-    .\Clean-NodeModules.ps1 -Path "Z:\WSL\Consultancy\Git_Repos" -DaysOlderThan 2
-    Scans repos, displays audit table, and interactively prompts for confirmation.
+    .\Clean-NodeModules.ps1 -Path "C:\Projects" -DaysOlderThan 30 -DryRun
+    Scans an explicit workspace, reporting only folders untouched for 30 days.
+
+.EXAMPLE
+    .\Clean-NodeModules.ps1 -Path "C:\Projects" -WhatIf
+    Lists the folders that would be deleted without deleting any.
 #>
 
+# ConfirmImpact is deliberately left at its default (Medium).
+#
+# Raising it to High makes ShouldProcess raise its own interactive confirmation
+# for every folder. That is wrong twice over: -Force already records the user's
+# decision, so a second prompt is redundant, and an agent invoking this script
+# with -File has no host UI to render the prompt, which makes PowerShell throw
+# NullReferenceException from ShouldProcess instead of deleting or reporting.
+#
+# With the default impact, ShouldProcess still honours -WhatIf (the safety
+# guarantee that matters) and still prompts under an explicit -Confirm.
 [CmdletBinding(SupportsShouldProcess = $true)]
 param (
     [Parameter(Position = 0)]
-    [string]$Path = "Z:\WSL\Consultancy\Git_Repos",
+    [string]$Path = '.',
 
     [Parameter()]
     [ValidateRange(0.0, 365.0)]
-    [double]$DaysOlderThan = 2.0,
+    [double]$DaysOlderThan = 14.0,
 
     [Parameter()]
     [switch]$DryRun,
@@ -81,6 +105,32 @@ function Format-ByteSize {
     else { return "$Bytes B" }
 }
 
+function Protect-SensitivePath {
+    <#
+    .SYNOPSIS
+        Scrubs the account name from a filesystem path for display and export.
+    #>
+    param([Parameter(Mandatory = $true)][AllowEmptyString()][string]$PathValue)
+
+    if ([string]::IsNullOrWhiteSpace($PathValue)) { return $PathValue }
+
+    $scrubbed = $PathValue
+    foreach ($profileRoot in @('\Users\', '\Documents and Settings\')) {
+        $pattern = [regex]::Escape($profileRoot) + '[^\\]+'
+        $scrubbed = [regex]::Replace($scrubbed, $pattern, ($profileRoot + '<USER>'), [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    }
+
+    $homePath = $env:USERPROFILE
+    if (-not [string]::IsNullOrWhiteSpace($homePath)) {
+        $trimmedHome = $homePath.TrimEnd('\')
+        if ($trimmedHome.Length -gt 3 -and $scrubbed.StartsWith($trimmedHome, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $scrubbed = '<USERPROFILE>' + $scrubbed.Substring($trimmedHome.Length)
+        }
+    }
+
+    return $scrubbed
+}
+
 function Show-HeaderBanner {
     param([string]$ScanPath, [double]$ThresholdDays, [bool]$IsDryRun)
 
@@ -88,28 +138,14 @@ function Show-HeaderBanner {
     $modeColor = if ($IsDryRun) { "Green" } else { "Yellow" }
 
     Write-Host ""
-    Write-Host "╭─────────────────────────────────────────────────────────────────────────────╮" -ForegroundColor Cyan
-    Write-Host "│ " -ForegroundColor Cyan -NoNewline
-    Write-Host "NODE_MODULES SPACE CLEANER" -ForegroundColor White -NoNewline
-    Write-Host (" " * (42 - "NODE_MODULES SPACE CLEANER".Length)) -NoNewline
-    Write-Host "Cognivyn Maintenance" -ForegroundColor DarkCyan -NoNewline
-    Write-Host " │" -ForegroundColor Cyan
-    Write-Host "│ " -ForegroundColor Cyan -NoNewline
-    Write-Host "Mode: $modeText" -ForegroundColor $modeColor -NoNewline
-    $remSpaces = 75 - ("Mode: $modeText".Length)
-    if ($remSpaces -gt 0) { Write-Host (" " * $remSpaces) -NoNewline }
-    Write-Host "│" -ForegroundColor Cyan
-    Write-Host "│ " -ForegroundColor Cyan -NoNewline
-    Write-Host "Scan Root: $ScanPath" -ForegroundColor DarkGray -NoNewline
-    $remSpaces2 = 75 - ("Scan Root: $ScanPath".Length)
-    if ($remSpaces2 -gt 0) { Write-Host (" " * $remSpaces2) -NoNewline }
-    Write-Host "│" -ForegroundColor Cyan
-    Write-Host "│ " -ForegroundColor Cyan -NoNewline
-    Write-Host "Stale Threshold: > $ThresholdDays days since last write" -ForegroundColor DarkGray -NoNewline
-    $remSpaces3 = 75 - ("Stale Threshold: > $ThresholdDays days since last write".Length)
-    if ($remSpaces3 -gt 0) { Write-Host (" " * $remSpaces3) -NoNewline }
-    Write-Host "│" -ForegroundColor Cyan
-    Write-Host "╰─────────────────────────────────────────────────────────────────────────────╯" -ForegroundColor Cyan
+    Write-Host "=================================================================" -ForegroundColor Cyan
+    Write-Host " NODE_MODULES SPACE CLEANER" -ForegroundColor White
+    Write-Host " Cognivyn Maintenance" -ForegroundColor DarkCyan
+    Write-Host "-----------------------------------------------------------------" -ForegroundColor Cyan
+    Write-Host " Mode          : $modeText" -ForegroundColor $modeColor
+    Write-Host " Scan Root     : $(Protect-SensitivePath -PathValue $ScanPath)" -ForegroundColor DarkGray
+    Write-Host " Stale Cutoff  : older than $ThresholdDays days since last write" -ForegroundColor DarkGray
+    Write-Host "=================================================================" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -119,14 +155,16 @@ if (-not (Test-Path -LiteralPath $Path)) {
     exit 1
 }
 
-Show-HeaderBanner -ScanPath $Path -ThresholdDays $DaysOlderThan -IsDryRun $DryRun
+$resolvedPath = (Get-Item -LiteralPath $Path -Force).FullName
 
-Write-Host "Searching for top-level node_modules directories (skipping Archives, .git)..." -ForegroundColor Cyan
+Show-HeaderBanner -ScanPath $resolvedPath -ThresholdDays $DaysOlderThan -IsDryRun $DryRun
+
+Write-Host "Searching for node_modules directories (skipping archives, .git, pnpm store)..." -ForegroundColor Cyan
 
 # --- Fast Breadth-First Search ---
 $excludedDirNames = @('04-Archives', 'Archives', '.git', '.pnpm-store', '$RECYCLE.BIN', '.next', '.cache')
 $queue = [System.Collections.Generic.Queue[string]]::new()
-$queue.Enqueue($Path)
+$queue.Enqueue($resolvedPath)
 
 $foundDirs = [System.Collections.Generic.List[System.IO.DirectoryInfo]]::new()
 
@@ -141,6 +179,9 @@ while ($queue.Count -gt 0) {
         } elseif ($dir.Name -in $excludedDirNames) {
             # Safely skip excluded folders without traversing them
             continue
+        } elseif ($dir.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+            # Never traverse a junction or symlink; it can cycle or leave the scan root.
+            continue
         } else {
             $queue.Enqueue($dir.FullName)
         }
@@ -148,7 +189,7 @@ while ($queue.Count -gt 0) {
 }
 
 if ($foundDirs.Count -eq 0) {
-    Write-Host "`nNo node_modules directories found under '$Path'. Your workspace is completely clean!" -ForegroundColor Green
+    Write-Host "`nNo node_modules directories found under '$(Protect-SensitivePath -PathValue $resolvedPath)'. Your workspace is completely clean!" -ForegroundColor Green
     exit 0
 }
 
@@ -158,6 +199,8 @@ Write-Host ""
 # --- Measure Sizes and Age ---
 $inventory = @()
 $now = Get-Date
+$statusEligible = "ELIGIBLE (> $DaysOlderThan d)"
+$statusKeep = "KEEP (RECENT)"
 
 $idx = 0
 foreach ($dir in $foundDirs) {
@@ -174,13 +217,15 @@ foreach ($dir in $foundDirs) {
     $inventory += [PSCustomObject]@{
         ProjectName   = $dir.Parent.Name
         FullPath      = $dir.FullName
+        DisplayPath   = Protect-SensitivePath -PathValue $dir.FullName
         ParentPath    = $dir.Parent.FullName
         SizeBytes     = $sizeBytes
         SizeFormatted = Format-ByteSize $sizeBytes
         LastWriteTime = $dir.LastWriteTime
         AgeDays       = $ageDays
         Eligible      = $isEligible
-        Status        = if ($isEligible) { "ELIGIBLE (> 2d)" } else { "KEEP (RECENT)" }
+        # Threshold is interpolated so the label never contradicts -DaysOlderThan.
+        Status        = if ($isEligible) { $statusEligible } else { $statusKeep }
         StatusColor   = if ($isEligible) { "Yellow" } else { "Green" }
     }
 }
@@ -204,29 +249,29 @@ foreach ($item in $inventory) {
 
 # --- Summary Bar ---
 Write-Host "  DISCOVERED: $($inventory.Count) node_modules" -ForegroundColor White -NoNewline
-Write-Host "  │  TOTAL FOOTPRINT: $(Format-ByteSize $totalSize)" -ForegroundColor DarkCyan -NoNewline
-Write-Host "  │  RECLAIMABLE (> 2d): " -ForegroundColor DarkGray -NoNewline
+Write-Host "  |  TOTAL FOOTPRINT: $(Format-ByteSize $totalSize)" -ForegroundColor DarkCyan -NoNewline
+Write-Host "  |  RECLAIMABLE (> $DaysOlderThan d): " -ForegroundColor DarkGray -NoNewline
 Write-Host "$(Format-ByteSize $reclaimableSize) ($eligibleCount projects)" -ForegroundColor Yellow -NoNewline
-Write-Host "  │  RECENT (< 2d): " -ForegroundColor DarkGray -NoNewline
+Write-Host "  |  RECENT (< $DaysOlderThan d): " -ForegroundColor DarkGray -NoNewline
 Write-Host "$keptCount projects" -ForegroundColor Green
 Write-Host ""
 
 # --- Render Inventory Table ---
-Write-Host "┌────┬─────────────────────────────┬───────────┬─────────────────────┬──────────┬─────────────────┐" -ForegroundColor DarkCyan
-Write-Host "│ " -ForegroundColor DarkCyan -NoNewline
+Write-Host "+----+-----------------------------+-----------+---------------------+-----------+-----------------+" -ForegroundColor DarkCyan
+Write-Host "| " -ForegroundColor DarkCyan -NoNewline
 Write-Host "#  " -ForegroundColor White -NoNewline
-Write-Host "│ " -ForegroundColor DarkCyan -NoNewline
+Write-Host "| " -ForegroundColor DarkCyan -NoNewline
 Write-Host "PROJECT                      " -ForegroundColor White -NoNewline
-Write-Host "│ " -ForegroundColor DarkCyan -NoNewline
+Write-Host "| " -ForegroundColor DarkCyan -NoNewline
 Write-Host "SIZE      " -ForegroundColor White -NoNewline
-Write-Host "│ " -ForegroundColor DarkCyan -NoNewline
+Write-Host "| " -ForegroundColor DarkCyan -NoNewline
 Write-Host "LAST MODIFIED       " -ForegroundColor White -NoNewline
-Write-Host "│ " -ForegroundColor DarkCyan -NoNewline
+Write-Host "| " -ForegroundColor DarkCyan -NoNewline
 Write-Host "AGE (DAYS)" -ForegroundColor White -NoNewline
-Write-Host "│ " -ForegroundColor DarkCyan -NoNewline
+Write-Host "| " -ForegroundColor DarkCyan -NoNewline
 Write-Host "ACTION STATUS   " -ForegroundColor White -NoNewline
-Write-Host "│" -ForegroundColor DarkCyan
-Write-Host "├────┼─────────────────────────────┼───────────┼─────────────────────┼──────────┼─────────────────┤" -ForegroundColor DarkCyan
+Write-Host "|" -ForegroundColor DarkCyan
+Write-Host "+----+-----------------------------+-----------+---------------------+-----------+-----------------+" -ForegroundColor DarkCyan
 
 $rowNum = 1
 foreach ($item in ($inventory | Sort-Object SizeBytes -Descending)) {
@@ -237,22 +282,22 @@ foreach ($item in ($inventory | Sort-Object SizeBytes -Descending)) {
     $ageStr = ("$($item.AgeDays) d").PadLeft(8)
     $stStr  = $item.Status.PadRight(15)
 
-    Write-Host "│ " -ForegroundColor DarkCyan -NoNewline
+    Write-Host "| " -ForegroundColor DarkCyan -NoNewline
     Write-Host $rStr -ForegroundColor DarkGray -NoNewline
-    Write-Host " │ " -ForegroundColor DarkCyan -NoNewline
+    Write-Host " | " -ForegroundColor DarkCyan -NoNewline
     Write-Host $pTrim -ForegroundColor White -NoNewline
-    Write-Host " │ " -ForegroundColor DarkCyan -NoNewline
+    Write-Host " | " -ForegroundColor DarkCyan -NoNewline
     Write-Host $szStr -ForegroundColor Yellow -NoNewline
-    Write-Host " │ " -ForegroundColor DarkCyan -NoNewline
+    Write-Host " | " -ForegroundColor DarkCyan -NoNewline
     Write-Host $dtStr -ForegroundColor DarkGray -NoNewline
-    Write-Host " │ " -ForegroundColor DarkCyan -NoNewline
+    Write-Host " | " -ForegroundColor DarkCyan -NoNewline
     Write-Host $ageStr -ForegroundColor White -NoNewline
-    Write-Host " │ " -ForegroundColor DarkCyan -NoNewline
+    Write-Host " | " -ForegroundColor DarkCyan -NoNewline
     Write-Host $stStr -ForegroundColor $item.StatusColor -NoNewline
-    Write-Host " │" -ForegroundColor DarkCyan
+    Write-Host " |" -ForegroundColor DarkCyan
     $rowNum++
 }
-Write-Host "└────┴─────────────────────────────┴───────────┴─────────────────────┴──────────┴─────────────────┘" -ForegroundColor DarkCyan
+Write-Host "+----+-----------------------------+-----------+---------------------+-----------+-----------------+" -ForegroundColor DarkCyan
 Write-Host ""
 
 # --- Optional Export ---
@@ -262,14 +307,11 @@ if ($ExportFormat -and $OutFile) {
         if ($parentOut -and -not (Test-Path -LiteralPath $parentOut)) {
             New-Item -ItemType Directory -Path $parentOut -Force | Out-Null
         }
+        $exportItems = $inventory | Select-Object ProjectName, SizeFormatted, SizeBytes, LastWriteTime, AgeDays, Eligible, DisplayPath
         if ($ExportFormat -eq 'CSV') {
-            $inventory | Select-Object ProjectName, SizeFormatted, SizeBytes, LastWriteTime, AgeDays, Eligible, FullPath |
-                Export-Csv -Path $OutFile -NoTypeInformation -Encoding UTF8
-            Write-Host "[EXPORT] Saved CSV audit log to: $OutFile" -ForegroundColor Green
+            $exportItems | Export-Csv -Path $OutFile -NoTypeInformation -Encoding UTF8
         } elseif ($ExportFormat -eq 'JSON') {
-            $inventory | Select-Object ProjectName, SizeFormatted, SizeBytes, LastWriteTime, AgeDays, Eligible, FullPath |
-                ConvertTo-Json -Depth 3 | Set-Content -Path $OutFile -Encoding UTF8
-            Write-Host "[EXPORT] Saved JSON audit log to: $OutFile" -ForegroundColor Green
+            $exportItems | ConvertTo-Json -Depth 3 | Set-Content -Path $OutFile -Encoding UTF8
         }
     } catch {
         Write-Warning "Failed to export audit log: $_"
@@ -279,7 +321,7 @@ if ($ExportFormat -and $OutFile) {
 # --- Decision Point: DryRun or Pruning ---
 if ($DryRun) {
     Write-Host "[DRY-RUN COMPLETE] Zero files were modified or deleted." -ForegroundColor Green
-    Write-Host "To safely reclaim $(Format-ByteSize $reclaimableSize), run without the -DryRun switch." -ForegroundColor Cyan
+    Write-Host "To reclaim $(Format-ByteSize $reclaimableSize), rerun without -DryRun. Preview first with -WhatIf." -ForegroundColor Cyan
     exit 0
 }
 
@@ -289,13 +331,9 @@ if ($eligibleCount -eq 0) {
 }
 
 # --- Interactive Permission Prompt ---
-Write-Host "─────────────────────────────────────────────────────────────────────────────" -ForegroundColor DarkGray
+Write-Host "-----------------------------------------------------------------" -ForegroundColor DarkGray
 Write-Host "PERMISSION REQUIRED TO PROCEED WITH CLEANUP:" -ForegroundColor Yellow
 Write-Host "  Potential space to reclaim: $(Format-ByteSize $reclaimableSize) across $eligibleCount projects." -ForegroundColor White
-Write-Host ""
-Write-Host "  [A] Delete ALL eligible node_modules (> $DaysOlderThan days old)" -ForegroundColor Red
-Write-Host "  [I] Interactive confirmation (prompt for EACH folder individually)" -ForegroundColor Yellow
-Write-Host "  [S] Skip / Cancel (Exit without deleting anything)" -ForegroundColor Green
 Write-Host ""
 
 $choice = ""
@@ -312,8 +350,11 @@ if ($choice -ne 'A' -and $choice -ne 'I') {
 }
 
 # --- Deletion Routine ---
+# Every deletion passes through ShouldProcess, so -WhatIf reports instead of
+# deleting and -Confirm prompts even under -Force.
 $purgedBytes = 0.0
 $purgedCount = 0
+$plannedCount = 0
 
 $eligibleItems = $inventory | Where-Object { $_.Eligible }
 
@@ -329,31 +370,39 @@ foreach ($target in $eligibleItems) {
         }
     }
 
-    if ($doDelete) {
-        Write-Host "Purging '$($target.FullPath)'..." -ForegroundColor Yellow -NoNewline
-        try {
-            # Use long-path prefix for safe and robust deletion of deep node_modules trees on Windows
-            $targetLiteral = $target.FullPath
-            if (-not $targetLiteral.StartsWith('\\?\')) {
-                $targetLiteral = "\\?\" + $targetLiteral
-            }
-            Remove-Item -LiteralPath $targetLiteral -Recurse -Force -ErrorAction Stop
-            Write-Host " [DELETED]" -ForegroundColor Green
-            $purgedBytes += $target.SizeBytes
-            $purgedCount++
-        } catch {
-            Write-Host " [FAILED: $_]" -ForegroundColor Red
-        }
-    } else {
+    if (-not $doDelete) {
         Write-Host "Skipped '$($target.ProjectName)'." -ForegroundColor DarkGray
+        continue
+    }
+
+    $plannedCount++
+    $action = "Delete node_modules in '$($target.DisplayPath)' ($($target.SizeFormatted), $($target.AgeDays)d old)"
+
+    if (-not $PSCmdlet.ShouldProcess($target.DisplayPath, $action)) {
+        continue
+    }
+
+    Write-Host "Purging '$($target.DisplayPath)'..." -ForegroundColor Yellow -NoNewline
+    try {
+        # Use long-path prefix for safe and robust deletion of deep node_modules trees on Windows
+        $targetLiteral = $target.FullPath
+        if (-not $targetLiteral.StartsWith('\\?\')) {
+            $targetLiteral = "\\?\" + $targetLiteral
+        }
+        Remove-Item -LiteralPath $targetLiteral -Recurse -Force -ErrorAction Stop
+        Write-Host " [DELETED]" -ForegroundColor Green
+        $purgedBytes += $target.SizeBytes
+        $purgedCount++
+    } catch {
+        Write-Host " [FAILED: $_]" -ForegroundColor Red
     }
 }
 
 Write-Host ""
-Write-Host "╭─────────────────────────────────────────────────────────────────────────────╮" -ForegroundColor Green
-Write-Host "│ CLEANUP SUMMARY                                                             │" -ForegroundColor Green
-Write-Host "│ Purged Projects: $purgedCount" -ForegroundColor White
-Write-Host "│ Reclaimed Space: $(Format-ByteSize $purgedBytes)" -ForegroundColor White
-Write-Host "│ Note: Run 'bun install' in any project to restore dependencies when needed. │" -ForegroundColor DarkGray
-Write-Host "╰─────────────────────────────────────────────────────────────────────────────╯" -ForegroundColor Green
+Write-Host "=================================================================" -ForegroundColor Green
+Write-Host " CLEANUP SUMMARY" -ForegroundColor Green
+Write-Host " Purged Projects : $purgedCount of $plannedCount approved" -ForegroundColor White
+Write-Host " Reclaimed Space : $(Format-ByteSize $purgedBytes)" -ForegroundColor White
+Write-Host " Note: Run 'bun install' in any project to restore dependencies when needed." -ForegroundColor DarkGray
+Write-Host "=================================================================" -ForegroundColor Green
 Write-Host ""

@@ -11,12 +11,33 @@ description: >-
 
 Comprehensive, strictly read-only diagnostics runbook for Windows storage volumes. Combines zero-dependency native PowerShell volume health checks with developer-aware NT storage diagnostics (locked kernel space, VSS shadow storage, OS component store, WSL2 vhdx, and package cache audits).
 
+## When to use
+
+Use this skill when asked to:
+
+- "Check why my C: drive is full" or "audit my disk usage".
+- "Find the largest files on drive X".
+- "How much space can I reclaim?" before a cleanup.
+- "Space calculations don't match what Explorer reports" — see
+  [NT Kernel & Hidden Space](#2-nt-kernel-hidden-space-allocation).
+- "Audit my developer bloat" — WSL2 disks, Docker data, package caches, stale
+  `node_modules`.
+
+Do **NOT** use this skill for:
+
+- Deleting files. It diagnoses and reports; remediation commands are surfaced
+  for the user to run after review.
+- Non-Windows hosts. Every command here targets Windows storage.
+- Live monitoring or scheduled audits. These are one-shot point-in-time runs.
+
 ## Non-Negotiable Safety & Privacy Rules
 
 - **Zero State Mutation by Default**: All investigative steps, directory measurements, and volume evaluations are strictly read-only. Never delete, relocate, or truncate files without explicit human confirmation.
+- **`-WhatIf` Is Enforced**: Every deletion in `Clean-NodeModules.ps1` passes through `ShouldProcess`. Never bypass it, and never add a deletion path that skips it.
 - **Least Privilege Execution**: Standard inspections run in non-elevated user sessions. Do not demand administrative rights or bypass UAC unless running explicit OS-level DISM cleanup tasks with user approval.
-- **Privacy First**: When reporting file paths or generating diagnostic logs, scrub personal usernames (`C:\Users\<USER>`), environment secrets, and sensitive leaf directory names.
-- **No Blind Hydration**: Do not run naive recursive file scanners across cloud-synced storage roots (OneDrive, iCloud, Dropbox) that trip reparse points and trigger unwanted cloud downloads.
+- **Privacy First**: All paths reported by the bundled scripts are scrubbed of the account name (`C:\Users\<USER>`) by `Protect-SensitivePath` before display or export. Never reintroduce raw `$env:USERPROFILE` into output, and never commit a real user path into these files.
+- **No Blind Hydration**: Traversal skips NTFS reparse points and excludes cloud-sync roots, so it cannot trigger unwanted cloud downloads. Do not add an unfiltered recursive scan.
+- **Bounded Depth**: Every traversal takes `-MaxDepth` (default 4). An unbounded whole-drive walk can exceed ten minutes.
 - **Classified Remediation**: All cleanup recommendations must be clearly graded by risk level (`Zero`, `Low`, `Medium`) with exact copy-ready commands.
 
 ---
@@ -25,84 +46,100 @@ Comprehensive, strictly read-only diagnostics runbook for Windows storage volume
 
 ### 1. Volume Health Assessment
 
-Audit mounted storage drives, calculate total/used/free metrics, and identify critically constrained partitions (>90% full).
+Audit mounted storage drives, calculate total/used/free metrics, and identify critically constrained partitions.
 
-Execute the bundled zero-dependency PowerShell script from the skill package:
-
-```powershell
-# Run volume summary audit
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Analyze-DiskSpace.ps1
-```
-
-If specific drive capacity is constrained (e.g. `C:`), inspect the top heaviest directories and files:
+Run from the repository root so the paths below resolve:
 
 ```powershell
-# Measure top 10 heaviest directories on drive C:
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Analyze-DiskSpace.ps1 -Drive C: -TopFolders 10
+# Volume summary for every fixed local drive
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./win-disk-diagnostics/scripts/Analyze-DiskSpace.ps1
 
-# Identify top 20 largest individual files on drive C:
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Analyze-DiskSpace.ps1 -Drive C: -TopFiles 20
+# Scope to one drive. Omitting -Drive reports all volumes.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./win-disk-diagnostics/scripts/Analyze-DiskSpace.ps1 -Drive C:
 ```
 
-### 2. Identify NT Kernel & Hidden Space Allocation
+If a drive is constrained, inspect its heaviest contents:
 
-When standard folder calculations do not account for missing space on `C:`, check locked kernel files and shadow storage:
+```powershell
+# Top 10 heaviest directories on C:
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./win-disk-diagnostics/scripts/Analyze-DiskSpace.ps1 -Drive C: -TopFolders 10
+
+# Top 20 largest files on C:
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./win-disk-diagnostics/scripts/Analyze-DiskSpace.ps1 -Drive C: -TopFiles 20
+```
+
+If the default depth of 4 is too shallow for the tree in question, widen it
+explicitly. Expect proportionally more work:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./win-disk-diagnostics/scripts/Analyze-DiskSpace.ps1 -Drive C: -TopFiles 20 -MaxDepth 8
+```
+
+### 2. NT Kernel & Hidden Space Allocation
+
+When folder totals do not account for missing space on `C:`, check locked kernel files and shadow storage:
 
 1. **Kernel Virtual Memory Files**:
    - `pagefile.sys` and `swapfile.sys`: Paging and virtual memory allocations.
    - `hiberfil.sys`: Fast Startup and Hibernation image (typically 40–100% of physical RAM).
+   - These are visible to `-TopFiles` because the walk enumerates the drive root.
 2. **Volume Shadow Copies (VSS)**:
-   - Check allocated shadow storage used by System Restore points:
-     ```powershell
-     vssadmin list shadowstorage
-     ```
-3. **WinSpace Lens Diagnostics Engine**:
-   - For detailed breakdown of locked kernel space, VSS allocations, and developer toolchain caches, refer to [WinSpace Lens Guide](./references/winspace-lens-guide.md).
+   ```powershell
+   vssadmin list shadowstorage
+   ```
+3. **Component Store**:
+   ```cmd
+   Dism.exe /Online /Cleanup-Image /AnalyzeComponentStore
+   ```
+4. **Reference**: [WinSpace Lens Guide](./references/winspace-lens-guide.md) maps each hidden-space source to the bundled tooling.
 
 ### 3. Developer Workstation Bloat Audit
 
 On developer machines, major space consumers reside in virtualized environments and package managers:
 
-1. **WSL2 Virtual Hard Disks**:
-   - Locate dynamically expanded `ext4.vhdx` disks:
-     ```powershell
-     Get-ChildItem -Path "$env:LOCALAPPDATA\Packages" -Filter "ext4.vhdx" -Recurse -ErrorAction SilentlyContinue | Select-Object FullName, Length
-     ```
-2. **Docker Desktop**:
-   - Inspect Docker WSL data storage under `$env:LOCALAPPDATA\Docker\wsl\data\ext4.vhdx`.
-3. **Stale `node_modules` Trees**:
-   - Audit abandoned or duplicated `node_modules` folders across developer workspaces using the bundled scanner in dry-run mode:
-     ```powershell
-     powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Clean-NodeModules.ps1 -Path "Z:\WSL\Consultancy\Git_Repos" -DryRun
-     ```
-4. **Global Package Caches**:
-   - Bun: `~/.bun/install/cache`
-   - Cargo: `~/.cargo/registry` and `~/.cargo/git`
-   - npm: `npm cache verify` / `%LOCALAPPDATA%\npm-cache`
-   - pip: `%LOCALAPPDATA%\pip\cache`
+1. **WSL2 Virtual Hard Disks**: dynamically expanded `ext4.vhdx` under `$env:LOCALAPPDATA\Packages`.
+2. **Docker Desktop**: data under `$env:LOCALAPPDATA\Docker\wsl\data\ext4.vhdx`.
+3. **Stale `node_modules` Trees**: audit with the bundled scanner. Always pass an explicit `-Path`; the script no longer ships a machine-specific default.
+   ```powershell
+   # Audit only, zero deletions
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./win-disk-diagnostics/scripts/Clean-NodeModules.ps1 -Path "C:\Projects" -DryRun
+
+   # Preview exactly what a real run would delete
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./win-disk-diagnostics/scripts/Clean-NodeModules.ps1 -Path "C:\Projects" -WhatIf
+   ```
+   Folders modified within `-DaysOlderThan` (default 14) are always preserved.
+4. **Global Package Caches**: Bun `~/.bun/install/cache`, Cargo `~/.cargo/registry`, npm `%LOCALAPPDATA%\npm-cache`, pip `%LOCALAPPDATA%\pip\cache`.
 
 ### 4. Windows OS Waste Audit
 
-Inspect redundant operating system build remnants:
+1. **SoftwareDistribution Download Cache**: `%WINDIR%\SoftwareDistribution\Download`.
+2. **Component Store (WinSxS)**: run the DISM analyze command from step 2.
+3. **Previous Windows Installations**: `C:\Windows.old`. Excluded from traversal by default.
+4. **Crash Dumps & Temp Directories**: `%LOCALAPPDATA%\CrashDumps`, `%TEMP%`, `%WINDIR%\Temp`.
 
-1. **SoftwareDistribution Download Cache**:
-   - `%WINDIR%\SoftwareDistribution\Download` (remnants of completed Windows updates).
-2. **Component Store (WinSxS)**:
-   - Query if component cleanup is recommended:
-     ```cmd
-     Dism.exe /Online /Cleanup-Image /AnalyzeComponentStore
-     ```
-3. **Previous Windows Installations**:
-   - `C:\Windows.old` (retained after major feature upgrades).
-4. **Crash Dumps & Temp Directories**:
-   - `%LOCALAPPDATA%\CrashDumps`
-   - `%TEMP%` and `%WINDIR%\Temp`
+---
+
+## Output Modes for Sub-Agents
+
+Prefer machine-readable output when you need to reason over the results rather
+than show them to a human. Parsing the ANSI-colored tables is unnecessary work.
+
+| Switch | Behaviour |
+| --- | --- |
+| `-Json` | JSON on stdout, all tables suppressed. Implies `-Quiet`. |
+| `-Quiet` | Result tables only; drops the branded header and recommendations. |
+| `-ExportFormat CSV\|JSON -OutFile <path>` | Write a report file as well. |
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./win-disk-diagnostics/scripts/Analyze-DiskSpace.ps1 -Drive C: -TopFiles 20 -Json
+```
 
 ---
 
 ## Remediation Runbook & Risk Classification
 
-Present cleanup opportunities to the user categorized by risk tier:
+Present cleanup opportunities to the user categorized by risk tier. Do not run
+these yourself; surface them for review.
 
 ### Risk Level: Zero (Safe, immediate reclaim)
 - **Developer Package Caches**:
@@ -111,8 +148,8 @@ Present cleanup opportunities to the user categorized by risk tier:
   npm cache clean --force
   cargo cache --autoclean
   ```
-- **Stale `node_modules`**: Execute directory removal only after interactive confirmation or explicit target selection.
-- **User Temp Files**: Purge files older than 7 days in `$env:TEMP`.
+- **Stale `node_modules`**: `Clean-NodeModules.ps1` after `-DryRun` or `-WhatIf`.
+- **User Temp Files**: purge files older than 7 days in `$env:TEMP`.
 
 ### Risk Level: Low (System caches, recreatable assets)
 - **Windows Update Download Cache**:
@@ -127,25 +164,53 @@ Present cleanup opportunities to the user categorized by risk tier:
   ```
 
 ### Risk Level: Medium (System configuration changes)
-- **Compact WSL2 Virtual Disk**:
-  ```powershell
-  # 1. Shutdown WSL instances
-  wsl --shutdown
-  # 2. Compact vhdx disk file via diskpart
-  # select vdisk file="<path_to_ext4.vhdx>"
-  # compact vdisk
-  ```
-- **Disable Hibernation (Reclaims hiberfil.sys equal to RAM size)**:
+- **Compact WSL2 Virtual Disk**: `wsl --shutdown`, then compact the vhdx via `diskpart`.
+- **Disable Hibernation** (reclaims `hiberfil.sys`, equal to RAM size):
   ```powershell
   powercfg /hibernate off
   ```
-  *(Note: Disables Windows Fast Startup and Sleep-to-Hibernate transition).*
+  *(Disables Windows Fast Startup and Sleep-to-Hibernate transition.)*
 
 ---
 
-## Verification & Output Format
+## Required Report
 
-1. Summarize inspected drives with capacity, used, and free metrics.
-2. Highlight primary drivers of storage consumption.
-3. List candidate items for reclamation with quantified estimated savings.
-4. Provide verified copy-ready commands with clear warnings for any elevated or configuration-altering steps.
+```text
+## win-disk-diagnostics
+
+**Drives Audited**: <n> (<letters>)
+**Critical/Warning**: <list or "none">
+**Scan Depth**: <MaxDepth used>
+
+| Drive | Total | Used | Free | % Free | Health |
+| --- | --- | --- | --- | --- | --- |
+| C: | ... | ... | ... | ... | WARNING |
+
+**Primary Consumers**
+- <path> — <size>
+
+**Hidden / Locked Space**
+- pagefile.sys / hiberfil.sys — <size>
+- VSS shadow storage — <size or "not queried">
+
+**Reclaimable**
+- Zero risk: <item — size>
+- Low risk: <item — size>
+- Medium risk: <item — size>
+
+**Not Measured**
+- <source deliberately skipped, with reason>
+```
+
+Always state what was **not** measured. A depth-bounded or excluded scan is a
+partial answer, and an unqualified total invites acting on bad numbers.
+
+## Validation
+
+From the repository root:
+
+```bash
+./agent-skills validate win-disk-diagnostics
+python -m unittest discover -s tests -v
+python scripts/check_md_links.py
+```
