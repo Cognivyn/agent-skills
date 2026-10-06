@@ -12,6 +12,23 @@ description: >-
 Synchronize the local `main` branch with `origin` without silently discarding
 local work. Follow this order exactly.
 
+## Slash command
+
+OpenCode exposes this skill as `/git-clean` through
+`.opencode/commands/git-clean.md` in this repository. That file is a thin
+wrapper: it asks the agent to load this skill and forwards the typed text as
+`$ARGUMENTS`. It adds no steps of its own, so the workflow and safety rules
+below are authoritative and run unchanged.
+
+Argument handling:
+
+- Arguments are intent for the whole workflow, not a shortcut around it. They
+  never authorize `--force`, `--hard`, or automatic conflict resolution.
+- With no arguments and a dirty tree, still ask the user to choose **Stash**,
+  **Commit**, or **Abort**.
+- An unrecognized argument is not a reason to improvise. Ask what the user
+  meant, then continue with the unadorned workflow.
+
 ## Workflow
 
 ### 1. Check the working tree first

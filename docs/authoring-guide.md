@@ -22,6 +22,34 @@ my-skill/
 
 Remove unused resource directories or placeholder files before committing. Do not add a README inside the skill package unless a client integration explicitly requires it; the companion guide belongs under `docs/skills/`.
 
+## Expose a skill as a slash command
+
+A `SKILL.md` never registers a slash command. Skills and commands are separate registries: the model loads a skill through the `skill` tool or an `@skill-id` mention, while a slash command comes from a command file. To offer `/my-skill` in OpenCode, add a wrapper under `.opencode/commands/` at the repository root:
+
+```text
+.opencode/commands/my-skill.md
+```
+
+Only `.md` files are discovered, and the file path determines the command name, so `my-skill.md` becomes `/my-skill`. Nested paths become slash-separated names such as `/team/review`.
+
+```markdown title=".opencode/commands/my-skill.md"
+---
+description: One line shown in the command list
+agent: build
+---
+
+Load the `my-skill` skill with the skill tool, then follow its workflow
+exactly as written. Honor every stop condition in that skill.
+
+Treat the text below as the user's intent. Empty means ask rather than assume.
+
+$ARGUMENTS
+```
+
+Keep the wrapper thin. It should tell the agent to load the skill and forward `$ARGUMENTS`; it must not restate or extend the workflow, because that creates a second source of truth that drifts from `SKILL.md`. Use `$1`, `$2` for positional arguments only when the skill needs them. Do not put `template` in frontmatter; the body is the template.
+
+Skills must also be installed in the client before a command can load them, for example with `./agent-skills add my-skill`.
+
 ## Write `SKILL.md`
 
 Include YAML frontmatter with:
