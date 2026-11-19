@@ -10,6 +10,7 @@ Open-source, task-focused skills for agent clients such as [Kilo](https://kilo.a
 | [`env-sync-infisical`](./env-sync-infisical/) | Audit a monorepo .env.example files against env-var usage and Infisical secrets, then report gaps and drift across environments | Infisical CLI with an active login session | [Overview](./docs/skills/env-sync-infisical/README.md) · [`SKILL.md`](./env-sync-infisical/SKILL.md) |
 | [`gh-issue-create`](./gh-issue-create/) | Create a GitHub issue from the current repository, including a plan or Markdown checklist | GitHub CLI (`gh`) installed and authenticated | [Overview](./docs/skills/gh-issue-create/README.md) · [`SKILL.md`](./gh-issue-create/SKILL.md) |
 | [`git-clean`](./git-clean/) | Safely synchronize the local `main` branch with `origin` without losing local work | Git and an `origin` remote | [Overview](./docs/skills/git-clean/README.md) · [`SKILL.md`](./git-clean/SKILL.md) |
+| [`git-clean-local`](./git-clean-local/) | Delete stale local branches while keeping protected branches intact, with a dry-run preview and explicit confirmation | Git | [Overview](./docs/skills/git-clean-local/README.md) · [`SKILL.md`](./git-clean-local/SKILL.md) |
 | [`journey-capture`](./journey-capture/) | Automate step-by-step screenshot capture across web app user journeys (signup, checkout, onboarding) using `agent-browser`. Produces numbered screenshots plus a `journey.json` manifest | `agent-browser` CLI installed | [Overview](./docs/skills/journey-capture/README.md) · [`SKILL.md`](./journey-capture/SKILL.md) |
 | [`win-disk-diagnostics`](./win-disk-diagnostics/) | Inspect, diagnose, and audit Windows storage volumes, locked NT kernel space, developer bloat, and OS waste | PowerShell 5.1+ (Windows) | [Overview](./docs/skills/win-disk-diagnostics/README.md) · [`SKILL.md`](./win-disk-diagnostics/SKILL.md) |
 
@@ -33,6 +34,7 @@ Skills and slash commands are separate registries, so a `SKILL.md` alone never a
 | Command | Loads | Requires |
 | --- | --- | --- |
 | `/git-clean` | `git-clean` | Git with an `origin` remote |
+| `/git-clean-local` | `git-clean-local` | Git |
 | `/gh-issue-create <title>` | `gh-issue-create` | `gh` installed and authenticated |
 
 The wrappers add no workflow steps; each `SKILL.md` stays authoritative. Copy the wrapper pattern when adding a command for a new skill, and install the skill itself with `./agent-skills add <name>` so the client can load it.
