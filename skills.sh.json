@@ -1,0 +1,42 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "GitHub Flow",
+      "description": "Skills for the GitHub issue lifecycle: create, pick, epic, project boards, and complete.",
+      "skills": [
+        "gh-issue-create",
+        "gh-next-issue",
+        "gh-epic-issue",
+        "gh-project",
+        "gh-task-complete"
+      ]
+    },
+    {
+      "title": "Git",
+      "description": "Skills for safe Git and branch hygiene workflows.",
+      "skills": [
+        "git-clean",
+        "git-clean-local"
+      ]
+    },
+    {
+      "title": "Environment",
+      "description": "Skills for secrets, env files, and Infisical workflows.",
+      "skills": [
+        "env-sync-infisical",
+        "bun-dokploy-infisical"
+      ]
+    },
+    {
+      "title": "Windows & CI",
+      "description": "Skills for Windows disk maintenance, diagnostics, and fast CI pipelines.",
+      "skills": [
+        "pc-lean-and-trim",
+        "win-disk-diagnostics",
+        "ci-fast"
+      ]
+    }
+  ]
+}
