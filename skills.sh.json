@@ -3,7 +3,7 @@
   "notGrouped": "bottom",
   "groupings": [
     {
-      "title": "GitHub Flow",
+      "title": "GitHub Workflow",
       "description": "Skills for the GitHub issue lifecycle: create, pick, epic, project boards, and complete.",
       "skills": [
         "gh-issue-create",
