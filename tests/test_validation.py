@@ -48,6 +48,17 @@ class ValidationTestCase(unittest.TestCase):
         self.assertEqual(deps_block, ["demo-skill", "other-skill"])
 
     def test_add_link_flow(self):
+        probe_target = self.root / "probe-target"
+        probe_target.write_text("x", encoding="utf-8")
+        probe_link = self.root / "probe-link"
+        try:
+            probe_link.symlink_to(probe_target)
+        except OSError:
+            self.skipTest("symlink creation requires elevated privileges on this platform")
+        finally:
+            probe_target.unlink(missing_ok=True)
+            probe_link.unlink(missing_ok=True)
+
         installed = self.root / "installed"
         main(["init", "--skills-dir", str(installed)])
         self.assertEqual(main(["add", "demo-skill", "--link"]), 0)
