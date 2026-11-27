@@ -9,10 +9,14 @@ Open-source, task-focused skills for agent clients such as [Kilo](https://kilo.a
 | [`bun-dokploy-infisical`](./bun-dokploy-infisical/) | Generate Bun monorepo Dockerfile and Compose deployment assets for Dokploy, Traefik, and Infisical runtime secret injection | Bun monorepo, Docker Compose, Dokploy, Traefik, and an Infisical Universal Auth machine identity | [Overview](./docs/skills/bun-dokploy-infisical/README.md) · [`SKILL.md`](./bun-dokploy-infisical/SKILL.md) |
 | [`ci-fast`](./ci-fast/) | Accelerate repository CI pipelines to sub-minute turnaround with strict time budgets, timing-based test sharding, and PR test selection | GitHub CLI (`gh`), Bun runtime, Git | [Overview](./docs/skills/ci-fast/README.md) · [`SKILL.md`](./ci-fast/SKILL.md) |
 | [`env-sync-infisical`](./env-sync-infisical/) | Audit a monorepo .env.example files against env-var usage and Infisical secrets, then report gaps and drift across environments | Infisical CLI with an active login session | [Overview](./docs/skills/env-sync-infisical/README.md) · [`SKILL.md`](./env-sync-infisical/SKILL.md) |
+| [`gh-epic-issue`](./gh-epic-issue/) | Create an epic GitHub issue with child issues, linked as native sub-issues or via a task-list fallback | GitHub CLI (`gh`) installed and authenticated | [Overview](./docs/skills/gh-epic-issue/README.md) · [`SKILL.md`](./gh-epic-issue/SKILL.md) |
 | [`gh-issue-create`](./gh-issue-create/) | Create a GitHub issue from the current repository, including a plan or Markdown checklist | GitHub CLI (`gh`) installed and authenticated | [Overview](./docs/skills/gh-issue-create/README.md) · [`SKILL.md`](./gh-issue-create/SKILL.md) |
+| [`gh-project`](./gh-project/) | View and update GitHub Projects v2 items - list items, add issues/PRs, move Status and Priority fields | GitHub CLI (`gh`) with the `project` OAuth scope | [Overview](./docs/skills/gh-project/README.md) · [`SKILL.md`](./gh-project/SKILL.md) |
+| [`gh-task-complete`](./gh-task-complete/) | Complete a GitHub task end to end: verify checks, post a summary, close the issue, update project status, clean up the branch | GitHub CLI (`gh`) installed and authenticated | [Overview](./docs/skills/gh-task-complete/README.md) · [`SKILL.md`](./gh-task-complete/SKILL.md) |
 | [`git-clean`](./git-clean/) | Safely synchronize the local `main` branch with `origin` without losing local work | Git and an `origin` remote | [Overview](./docs/skills/git-clean/README.md) · [`SKILL.md`](./git-clean/SKILL.md) |
 | [`git-clean-local`](./git-clean-local/) | Delete stale local branches while keeping protected branches intact, with a dry-run preview and explicit confirmation | Git | [Overview](./docs/skills/git-clean-local/README.md) · [`SKILL.md`](./git-clean-local/SKILL.md) |
 | [`journey-capture`](./journey-capture/) | Automate step-by-step screenshot capture across web app user journeys (signup, checkout, onboarding) using `agent-browser`. Produces numbered screenshots plus a `journey.json` manifest | `agent-browser` CLI installed | [Overview](./docs/skills/journey-capture/README.md) · [`SKILL.md`](./journey-capture/SKILL.md) |
+| [`gh-next-issue`](./gh-next-issue/) | Pick the next GitHub issue to work on, ranked by project fields, labels, and milestones, with confirmation before branching | GitHub CLI (`gh`) installed and authenticated | [Overview](./docs/skills/gh-next-issue/README.md) · [`SKILL.md`](./gh-next-issue/SKILL.md) |
 | [`win-disk-diagnostics`](./win-disk-diagnostics/) | Inspect, diagnose, and audit Windows storage volumes, locked NT kernel space, developer bloat, and OS waste | PowerShell 5.1+ (Windows) | [Overview](./docs/skills/win-disk-diagnostics/README.md) · [`SKILL.md`](./win-disk-diagnostics/SKILL.md) |
 
 The [skill-specific documentation](./docs/skills/) contains concise usage and safety notes. The corresponding `SKILL.md` is the authoritative workflow an agent follows.
@@ -38,6 +42,10 @@ Skills and slash commands are separate registries, so a `SKILL.md` alone never a
 | `/git-clean` | `git-clean` | Git with an `origin` remote |
 | `/git-clean-local` | `git-clean-local` | Git |
 | `/gh-issue-create <title>` | `gh-issue-create` | `gh` installed and authenticated |
+| `/gh-next-issue` | `gh-next-issue` | `gh` installed and authenticated |
+| `/gh-epic-issue <title>` | `gh-epic-issue` | `gh` installed and authenticated |
+| `/gh-project` | `gh-project` | `gh` with the `project` scope |
+| `/gh-task-complete` | `gh-task-complete` | `gh` installed and authenticated |
 
 The wrappers add no workflow steps; each `SKILL.md` stays authoritative. Copy the wrapper pattern when adding a command for a new skill, and install the skill itself with `./agent-skills add <name>` so the client can load it.
 

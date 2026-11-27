@@ -437,6 +437,7 @@
     }
 
     .skill-name {
+      margin: 0;
       font-size: 1.125rem;
       font-weight: 700;
       color: var(--text-main);
@@ -888,12 +889,12 @@
 
       <div class="skills-grid" id="skillsGrid">
         <!-- Skill 1 -->
-        <div class="skill-card" data-category="infrastructure" data-search="bun dokploy infisical docker compose traefik deployment">
+        <article class="skill-card" data-category="infrastructure" data-search="bun dokploy infisical docker compose traefik deployment">
           <div>
             <div class="skill-card-header">
               <div class="skill-title-group">
                 <div class="skill-icon">B</div>
-                <div class="skill-name">bun-dokploy-infisical</div>
+                <h3 class="skill-name">bun-dokploy-infisical</h3>
               </div>
               <span class="skill-tag tag-infra">Infrastructure</span>
             </div>
@@ -910,15 +911,15 @@
               <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/bun-dokploy-infisical/README.md" class="card-link" target="_blank">Docs &rarr;</a>
             </div>
           </div>
-        </div>
+        </article>
 
         <!-- Skill 2 -->
-        <div class="skill-card" data-category="environment" data-search="env sync infisical audit secrets drift .env.example">
+        <article class="skill-card" data-category="environment" data-search="env sync infisical audit secrets drift .env.example">
           <div>
             <div class="skill-card-header">
               <div class="skill-title-group">
                 <div class="skill-icon">E</div>
-                <div class="skill-name">env-sync-infisical</div>
+                <h3 class="skill-name">env-sync-infisical</h3>
               </div>
               <span class="skill-tag tag-env">Environment</span>
             </div>
@@ -935,15 +936,15 @@
               <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/env-sync-infisical/README.md" class="card-link" target="_blank">Docs &rarr;</a>
             </div>
           </div>
-        </div>
+        </article>
 
         <!-- Skill 3 -->
-        <div class="skill-card" data-category="github" data-search="gh issue create github cli markdown plan checklist">
+        <article class="skill-card" data-category="github" data-search="gh issue create github cli markdown plan checklist">
           <div>
             <div class="skill-card-header">
               <div class="skill-title-group">
                 <div class="skill-icon">G</div>
-                <div class="skill-name">gh-issue-create</div>
+                <h3 class="skill-name">gh-issue-create</h3>
               </div>
               <span class="skill-tag tag-github">GitHub</span>
             </div>
@@ -960,15 +961,15 @@
               <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/gh-issue-create/README.md" class="card-link" target="_blank">Docs &rarr;</a>
             </div>
           </div>
-        </div>
+        </article>
 
         <!-- Skill 4 -->
-        <div class="skill-card" data-category="git" data-search="git clean main origin sync synchronize safe rebase">
+        <article class="skill-card" data-category="git" data-search="git clean main origin sync synchronize safe rebase">
           <div>
             <div class="skill-card-header">
               <div class="skill-title-group">
                 <div class="skill-icon">S</div>
-                <div class="skill-name">git-clean</div>
+                <h3 class="skill-name">git-clean</h3>
               </div>
               <span class="skill-tag tag-git">Git Workflow</span>
             </div>
@@ -985,7 +986,107 @@
               <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/git-clean/README.md" class="card-link" target="_blank">Docs &rarr;</a>
             </div>
           </div>
-        </div>
+        </article>
+
+        <!-- Skill 5 -->
+        <article class="skill-card" data-category="github" data-search="gh next issue pick backlog priority project status labels milestone branch assign">
+          <div>
+            <div class="skill-card-header">
+              <div class="skill-title-group">
+                <div class="skill-icon">N</div>
+                <h3 class="skill-name">gh-next-issue</h3>
+              </div>
+              <span class="skill-tag tag-github">GitHub</span>
+            </div>
+            <p class="skill-desc">Pick the next GitHub issue to work on, ranked by project fields, labels, and milestones, with confirmation before branching.</p>
+            <div class="skill-reqs">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span><strong>Requires:</strong> GitHub CLI (`gh`) installed and authenticated</span>
+            </div>
+          </div>
+          <div class="skill-footer">
+            <span class="cmd-preview">./agent-skills add gh-next-issue</span>
+            <div class="card-links">
+              <button class="copy-btn" onclick="copyToClipboard('./agent-skills add gh-next-issue', this)">Copy</button>
+              <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/gh-next-issue/README.md" class="card-link" target="_blank">Docs &rarr;</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- Skill 6 -->
+        <article class="skill-card" data-category="github" data-search="gh epic issue parent children sub-issues task list github cli">
+          <div>
+            <div class="skill-card-header">
+              <div class="skill-title-group">
+                <div class="skill-icon">E</div>
+                <h3 class="skill-name">gh-epic-issue</h3>
+              </div>
+              <span class="skill-tag tag-github">GitHub</span>
+            </div>
+            <p class="skill-desc">Create an epic GitHub issue with child issues, linked as native sub-issues or via a task-list fallback.</p>
+            <div class="skill-reqs">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span><strong>Requires:</strong> GitHub CLI (`gh`) installed and authenticated</span>
+            </div>
+          </div>
+          <div class="skill-footer">
+            <span class="cmd-preview">./agent-skills add gh-epic-issue</span>
+            <div class="card-links">
+              <button class="copy-btn" onclick="copyToClipboard('./agent-skills add gh-epic-issue', this)">Copy</button>
+              <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/gh-epic-issue/README.md" class="card-link" target="_blank">Docs &rarr;</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- Skill 7 -->
+        <article class="skill-card" data-category="github" data-search="gh project projects v2 board status priority item add move github cli">
+          <div>
+            <div class="skill-card-header">
+              <div class="skill-title-group">
+                <div class="skill-icon">P</div>
+                <h3 class="skill-name">gh-project</h3>
+              </div>
+              <span class="skill-tag tag-github">GitHub</span>
+            </div>
+            <p class="skill-desc">View and update GitHub Projects v2 items - list items, add issues and PRs, move Status and Priority fields.</p>
+            <div class="skill-reqs">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span><strong>Requires:</strong> GitHub CLI (`gh`) with the `project` OAuth scope</span>
+            </div>
+          </div>
+          <div class="skill-footer">
+            <span class="cmd-preview">./agent-skills add gh-project</span>
+            <div class="card-links">
+              <button class="copy-btn" onclick="copyToClipboard('./agent-skills add gh-project', this)">Copy</button>
+              <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/gh-project/README.md" class="card-link" target="_blank">Docs &rarr;</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- Skill 8 -->
+        <article class="skill-card" data-category="github" data-search="gh task complete close issue summary project done branch cleanup workflow">
+          <div>
+            <div class="skill-card-header">
+              <div class="skill-title-group">
+                <div class="skill-icon">T</div>
+                <h3 class="skill-name">gh-task-complete</h3>
+              </div>
+              <span class="skill-tag tag-github">GitHub</span>
+            </div>
+            <p class="skill-desc">Complete a GitHub task end to end: verify checks, post a summary, close the issue, update project status, clean up the branch.</p>
+            <div class="skill-reqs">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span><strong>Requires:</strong> GitHub CLI (`gh`) installed and authenticated</span>
+            </div>
+          </div>
+          <div class="skill-footer">
+            <span class="cmd-preview">./agent-skills add gh-task-complete</span>
+            <div class="card-links">
+              <button class="copy-btn" onclick="copyToClipboard('./agent-skills add gh-task-complete', this)">Copy</button>
+              <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/gh-task-complete/README.md" class="card-link" target="_blank">Docs &rarr;</a>
+            </div>
+          </div>
+        </article>
       </div>
     </section>
 
