@@ -477,6 +477,18 @@
       border: 1px solid #bfdbfe;
     }
 
+    .tag-testing {
+      background-color: #fff7ed;
+      color: #c2410c;
+      border: 1px solid #fed7aa;
+    }
+
+    .tag-windows {
+      background-color: #f0f9ff;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+    }
+
     .skill-desc {
       color: var(--text-muted);
       font-size: 0.9375rem;
@@ -884,6 +896,8 @@
           <button class="filter-pill" onclick="setCategory('environment', this)">Environment</button>
           <button class="filter-pill" onclick="setCategory('github', this)">GitHub</button>
           <button class="filter-pill" onclick="setCategory('git', this)">Git Workflow</button>
+          <button class="filter-pill" onclick="setCategory('testing', this)">Testing</button>
+          <button class="filter-pill" onclick="setCategory('windows', this)">Windows</button>
         </div>
       </div>
 
@@ -1084,6 +1098,156 @@
             <div class="card-links">
               <button class="copy-btn" onclick="copyToClipboard('./agent-skills add gh-task-complete', this)">Copy</button>
               <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/gh-task-complete/README.md" class="card-link" target="_blank">Docs &rarr;</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- Skill 9 -->
+        <article class="skill-card" data-category="infrastructure" data-search="ci fast pipeline github actions bun test sharding pr selection sub-minute">
+          <div>
+            <div class="skill-card-header">
+              <div class="skill-title-group">
+                <div class="skill-icon">C</div>
+                <h3 class="skill-name">ci-fast</h3>
+              </div>
+              <span class="skill-tag tag-infra">Infrastructure</span>
+            </div>
+            <p class="skill-desc">Accelerate repository CI pipelines to sub-minute turnaround with strict time budgets, timing-based test sharding, and PR test selection.</p>
+            <div class="skill-reqs">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span><strong>Requires:</strong> GitHub CLI (`gh`), Bun runtime, Git</span>
+            </div>
+          </div>
+          <div class="skill-footer">
+            <span class="cmd-preview">./agent-skills add ci-fast</span>
+            <div class="card-links">
+              <button class="copy-btn" onclick="copyToClipboard('./agent-skills add ci-fast', this)">Copy</button>
+              <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/ci-fast/README.md" class="card-link" target="_blank">Docs &rarr;</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- Skill 10 -->
+        <article class="skill-card" data-category="git" data-search="git clean local branches stale prune protected dry-run delete">
+          <div>
+            <div class="skill-card-header">
+              <div class="skill-title-group">
+                <div class="skill-icon">L</div>
+                <h3 class="skill-name">git-clean-local</h3>
+              </div>
+              <span class="skill-tag tag-git">Git Workflow</span>
+            </div>
+            <p class="skill-desc">Delete stale local branches while keeping protected branches intact, with a dry-run preview and explicit confirmation.</p>
+            <div class="skill-reqs">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span><strong>Requires:</strong> Git</span>
+            </div>
+          </div>
+          <div class="skill-footer">
+            <span class="cmd-preview">./agent-skills add git-clean-local</span>
+            <div class="card-links">
+              <button class="copy-btn" onclick="copyToClipboard('./agent-skills add git-clean-local', this)">Copy</button>
+              <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/git-clean-local/README.md" class="card-link" target="_blank">Docs &rarr;</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- Skill 11 -->
+        <article class="skill-card" data-category="testing" data-search="journey capture screenshots user journeys agent-browser onboarding checkout manifest">
+          <div>
+            <div class="skill-card-header">
+              <div class="skill-title-group">
+                <div class="skill-icon">J</div>
+                <h3 class="skill-name">journey-capture</h3>
+              </div>
+              <span class="skill-tag tag-testing">Testing</span>
+            </div>
+            <p class="skill-desc">Automate step-by-step screenshot capture across web app user journeys (signup, checkout, onboarding) using agent-browser.</p>
+            <div class="skill-reqs">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span><strong>Requires:</strong> `agent-browser` CLI installed</span>
+            </div>
+          </div>
+          <div class="skill-footer">
+            <span class="cmd-preview">./agent-skills add journey-capture</span>
+            <div class="card-links">
+              <button class="copy-btn" onclick="copyToClipboard('./agent-skills add journey-capture', this)">Copy</button>
+              <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/journey-capture/README.md" class="card-link" target="_blank">Docs &rarr;</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- Skill 12 -->
+        <article class="skill-card" data-category="environment" data-search="bun apis native runtime node compatibility review">
+          <div>
+            <div class="skill-card-header">
+              <div class="skill-title-group">
+                <div class="skill-icon">U</div>
+                <h3 class="skill-name">use-bun-apis</h3>
+              </div>
+              <span class="skill-tag tag-env">Environment</span>
+            </div>
+            <p class="skill-desc">Write and review Bun runtime code using Bun-native APIs instead of Node.js equivalents, with guidance on when not to use them.</p>
+            <div class="skill-reqs">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span><strong>Requires:</strong> Bun runtime</span>
+            </div>
+          </div>
+          <div class="skill-footer">
+            <span class="cmd-preview">./agent-skills add use-bun-apis</span>
+            <div class="card-links">
+              <button class="copy-btn" onclick="copyToClipboard('./agent-skills add use-bun-apis', this)">Copy</button>
+              <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/use-bun-apis/README.md" class="card-link" target="_blank">Docs &rarr;</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- Skill 13 -->
+        <article class="skill-card" data-category="windows" data-search="pc lean trim disk cleanup windows 11 wsl vhd delivery optimization">
+          <div>
+            <div class="skill-card-header">
+              <div class="skill-title-group">
+                <div class="skill-icon">P</div>
+                <h3 class="skill-name">pc-lean-and-trim</h3>
+              </div>
+              <span class="skill-tag tag-windows">Windows</span>
+            </div>
+            <p class="skill-desc">Audit, lean, and prevent disk space bloat on Windows 11 developer systems with a read-only dry-run first and strict safety gates.</p>
+            <div class="skill-reqs">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span><strong>Requires:</strong> PowerShell 5.1+ (Windows)</span>
+            </div>
+          </div>
+          <div class="skill-footer">
+            <span class="cmd-preview">./agent-skills add pc-lean-and-trim</span>
+            <div class="card-links">
+              <button class="copy-btn" onclick="copyToClipboard('./agent-skills add pc-lean-and-trim', this)">Copy</button>
+              <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/pc-lean-and-trim/README.md" class="card-link" target="_blank">Docs &rarr;</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- Skill 14 -->
+        <article class="skill-card" data-category="windows" data-search="win disk diagnostics storage volumes ntfs developer bloat audit powershell">
+          <div>
+            <div class="skill-card-header">
+              <div class="skill-title-group">
+                <div class="skill-icon">W</div>
+                <h3 class="skill-name">win-disk-diagnostics</h3>
+              </div>
+              <span class="skill-tag tag-windows">Windows</span>
+            </div>
+            <p class="skill-desc">Inspect, diagnose, and audit Windows storage volumes, locked NT kernel space, developer bloat, and OS waste.</p>
+            <div class="skill-reqs">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span><strong>Requires:</strong> PowerShell 5.1+ (Windows)</span>
+            </div>
+          </div>
+          <div class="skill-footer">
+            <span class="cmd-preview">./agent-skills add win-disk-diagnostics</span>
+            <div class="card-links">
+              <button class="copy-btn" onclick="copyToClipboard('./agent-skills add win-disk-diagnostics', this)">Copy</button>
+              <a href="https://github.com/Cognivyn/agent-skills/tree/main/docs/skills/win-disk-diagnostics/README.md" class="card-link" target="_blank">Docs &rarr;</a>
             </div>
           </div>
         </article>
