@@ -17,6 +17,7 @@ Open-source, task-focused skills for agent clients such as [Kilo](https://kilo.a
 | [`git-clean-local`](./git-clean-local/) | Delete stale local branches while keeping protected branches intact, with a dry-run preview and explicit confirmation | Git | [Overview](./docs/skills/git-clean-local/README.md) · [`SKILL.md`](./git-clean-local/SKILL.md) |
 | [`journey-capture`](./journey-capture/) | Automate step-by-step screenshot capture across web app user journeys (signup, checkout, onboarding) using `agent-browser`. Produces numbered screenshots plus a `journey.json` manifest | `agent-browser` CLI installed | [Overview](./docs/skills/journey-capture/README.md) · [`SKILL.md`](./journey-capture/SKILL.md) |
 | [`gh-next-issue`](./gh-next-issue/) | Pick the next GitHub issue to work on, ranked by project fields, labels, and milestones, with confirmation before branching | GitHub CLI (`gh`) installed and authenticated | [Overview](./docs/skills/gh-next-issue/README.md) · [`SKILL.md`](./gh-next-issue/SKILL.md) |
+| [`telegram-mode`](./telegram-mode/) | Compress assistant prose into concise or Telegram-style English to reduce output tokens while keeping code and paths exact | Any supported agent client | [Overview](./docs/skills/telegram-mode/README.md) · [`SKILL.md`](./telegram-mode/SKILL.md) |
 | [`win-disk-diagnostics`](./win-disk-diagnostics/) | Inspect, diagnose, and audit Windows storage volumes, locked NT kernel space, developer bloat, and OS waste | PowerShell 5.1+ (Windows) | [Overview](./docs/skills/win-disk-diagnostics/README.md) · [`SKILL.md`](./win-disk-diagnostics/SKILL.md) |
 
 The [skill-specific documentation](./docs/skills/) contains concise usage and safety notes. The corresponding `SKILL.md` is the authoritative workflow an agent follows.
@@ -46,6 +47,7 @@ Skills and slash commands are separate registries, so a `SKILL.md` alone never a
 | `/gh-epic-issue <title>` | `gh-epic-issue` | `gh` installed and authenticated |
 | `/gh-project` | `gh-project` | `gh` with the `project` scope |
 | `/gh-task-complete` | `gh-task-complete` | `gh` installed and authenticated |
+| `/telegram-mode [lite\|full\|off]` | `telegram-mode` | Any supported agent client |
 
 The wrappers add no workflow steps; each `SKILL.md` stays authoritative. Copy the wrapper pattern when adding a command for a new skill, and install the skill itself with `./agent-skills add <name>` so the client can load it.
 

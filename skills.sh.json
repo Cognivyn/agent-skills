@@ -37,6 +37,13 @@
         "win-disk-diagnostics",
         "ci-fast"
       ]
+    },
+    {
+      "title": "Token Efficiency",
+      "description": "Skills for reducing token usage and response latency in coding workflows.",
+      "skills": [
+        "telegram-mode"
+      ]
     }
   ]
 }
